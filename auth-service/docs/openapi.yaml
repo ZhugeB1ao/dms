@@ -1,0 +1,263 @@
+openapi: 3.0.3
+info:
+  title: Auth Service API
+  version: 0.0.1
+  description: |
+    Authentication for the platform. Access tokens are short-lived JWTs (15 min), refresh tokens are
+    opaque and rotate on every use (7 days).
+
+    **Client flow**
+    1. `login` -> keep `accessToken` + `refreshToken`.
+    2. Send `Authorization: Bearer <accessToken>` on protected calls.
+    3. On **401**, call `refresh` once with the refresh token and retry. If `refresh` also returns 401, send the user to login.
+    4. Each refresh token works exactly once. Re-using an old one revokes the whole session family (security measure).
+
+    **Errors** share Spring's default shape: `{ "timestamp", "status", "error", "message", "path" }`.
+    Roles are `ADMIN`, `MANAGER`, `EMPLOYEE`; the role is a claim in the access token and is returned by `/me`.
+servers:
+  - url: http://localhost:8081
+tags:
+  - name: Auth
+paths:
+  /api/auth/register:
+    post:
+      tags: [Auth]
+      summary: Create an account (always role EMPLOYEE) and log in
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RegisterRequest' }
+      responses:
+        '200':
+          description: Account created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuthResponse' }
+        '409':
+          description: Username or email already exists
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+  /api/auth/login:
+    post:
+      tags: [Auth]
+      summary: Log in with username and password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/LoginRequest' }
+      responses:
+        '200':
+          description: Logged in
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuthResponse' }
+        '401':
+          description: Wrong username or password
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '403':
+          description: Account is deactivated
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+  /api/auth/refresh:
+    post:
+      tags: [Auth]
+      summary: Exchange a refresh token for a new access + refresh pair
+      description: The old refresh token is revoked (`revoked_at`, `replaced_by`) and can't be used again.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RefreshTokenRequest' }
+      responses:
+        '200':
+          description: New token pair
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuthResponse' }
+        '400':
+          description: Refresh token is blank
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '401':
+          description: Token unknown, expired, or already used (already-used also invalidates all access tokens of that user)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '403':
+          description: Account is deactivated
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+  /api/auth/logout:
+    post:
+      tags: [Auth]
+      summary: Revoke a refresh token and invalidate the user's access tokens
+      description: Always 200, even if the token is unknown.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RefreshTokenRequest' }
+      responses:
+        '200':
+          description: Logged out
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Message' }
+  /api/auth/me:
+    get:
+      tags: [Auth]
+      summary: Current user
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Current user
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Me' }
+        '401':
+          description: Missing, expired, or invalidated access token
+  /api/auth/change-password:
+    post:
+      tags: [Auth]
+      summary: Change password while logged in
+      description: |
+        On success every access token and refresh token of the user is invalidated, **including the caller's**,
+        so the client must send the user back to login.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ChangePasswordRequest' }
+      responses:
+        '200':
+          description: Password changed
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Message' }
+        '400':
+          description: Current password is wrong, or new password is blank (400 on purpose, not 401, so clients don't try to refresh)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '401':
+          description: Missing, expired, or invalidated access token
+  /api/auth/forgot-password:
+    post:
+      tags: [Auth]
+      summary: Request a password reset token
+      description: |
+        Always 200 with the same body, whether or not the email exists.
+        The token is valid for 15 minutes and single use; a new request replaces the previous token.
+        **Delivery is not implemented yet: the token is only written to the server log.**
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ForgotPasswordRequest' }
+      responses:
+        '200':
+          description: Accepted
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Message' }
+  /api/auth/reset-password:
+    post:
+      tags: [Auth]
+      summary: Set a new password using a reset token
+      description: On success all access and refresh tokens of the user are invalidated.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ResetPasswordRequest' }
+      responses:
+        '200':
+          description: Password reset
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Message' }
+        '400':
+          description: Token or password blank, or token invalid / expired / already used
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    RegisterRequest:
+      type: object
+      required: [username, email, password, departmentId]
+      properties:
+        username: { type: string, maxLength: 50 }
+        email: { type: string, format: email }
+        password: { type: string }
+        departmentId: { type: integer, format: int64 }
+    LoginRequest:
+      type: object
+      required: [username, password]
+      properties:
+        username: { type: string }
+        password: { type: string }
+    RefreshTokenRequest:
+      type: object
+      required: [refreshToken]
+      properties:
+        refreshToken: { type: string }
+    ChangePasswordRequest:
+      type: object
+      required: [currentPassword, newPassword]
+      properties:
+        currentPassword: { type: string }
+        newPassword: { type: string }
+    ForgotPasswordRequest:
+      type: object
+      required: [email]
+      properties:
+        email: { type: string, format: email }
+    ResetPasswordRequest:
+      type: object
+      required: [token, newPassword]
+      properties:
+        token: { type: string }
+        newPassword: { type: string }
+    AuthResponse:
+      type: object
+      properties:
+        accessToken: { type: string }
+        refreshToken: { type: string }
+        tokenType: { type: string, example: Bearer }
+    Me:
+      type: object
+      properties:
+        id: { type: integer, format: int64 }
+        username: { type: string }
+        email: { type: string }
+        departmentId: { type: integer, format: int64 }
+        role: { type: string, enum: [ADMIN, MANAGER, EMPLOYEE] }
+    Message:
+      type: object
+      properties:
+        message: { type: string }
+    Error:
+      type: object
+      properties:
+        timestamp: { type: string, format: date-time }
+        status: { type: integer }
+        error: { type: string }
+        message: { type: string }
+        path: { type: string }

@@ -39,6 +39,13 @@ public class AuthController {
         return ResponseEntity.ok(authService.refreshToken(req));
     }
 
+    @PostMapping("/change-password")
+    public ResponseEntity<?> changePassword(@AuthenticationPrincipal CustomUserDetails userDetails,
+                                            @RequestBody ChangePasswordRequest req) {
+        authService.changePassword(userDetails.getUser().getId(), req);
+        return ResponseEntity.ok(Map.of("message", "Đổi mật khẩu thành công, vui lòng đăng nhập lại!"));
+    }
+
     @PostMapping("/forgot-password")
     public ResponseEntity<?> forgotPassword(@RequestBody ForgotPasswordRequest req) {
         authService.forgotPassword(req);

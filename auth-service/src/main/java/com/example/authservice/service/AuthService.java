@@ -164,9 +164,30 @@ public class AuthService {
                 .filter(u -> u.isActive() && u.getResetTokenExpiresAt().isAfter(Instant.now()))
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Reset token is invalid or has expired!"));
 
-        user.setPasswordHash(passwordEncoder.encode(req.newPassword()));
         user.setResetTokenHash(null);
         user.setResetTokenExpiresAt(null);
+        applyNewPassword(user, req.newPassword());
+    }
+
+    @Transactional
+    public void changePassword(long userId, ChangePasswordRequest req) {
+        if (req.currentPassword() == null || req.newPassword() == null || req.newPassword().isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Current and new password must not be blank!");
+        }
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User does not exist!"));
+
+        // 400 not 401: a 401 would make the client think its access token expired and loop on /refresh.
+        if (!passwordEncoder.matches(req.currentPassword(), user.getPasswordHash())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Current password is incorrect!");
+        }
+
+        applyNewPassword(user, req.newPassword());
+    }
+
+    private void applyNewPassword(User user, String newPassword) {
+        user.setPasswordHash(passwordEncoder.encode(newPassword));
         user.setTokenVersion(user.getTokenVersion() + 1); // invalidates access tokens already issued
         userRepository.save(user);
         refreshTokenRepository.revokeAllByUserId(user.getId(), Instant.now());
