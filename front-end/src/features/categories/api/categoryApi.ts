@@ -23,9 +23,17 @@ export interface CategoryFilterParams {
   activeOnly?: boolean
 }
 
-// Gọi thẳng vào backend category-service (cổng 8080)
+// Gọi qua Vite proxy (/category-api -> http://localhost:8080/api) để tránh lỗi CORS khi đổi port
+const rawCategoryBaseUrl = import.meta.env.VITE_CATEGORY_API_URL as
+  string | undefined
+const categoryBaseUrl =
+  import.meta.env.DEV &&
+  (!rawCategoryBaseUrl || rawCategoryBaseUrl === 'http://localhost:8080/api')
+    ? '/category-api'
+    : rawCategoryBaseUrl || 'http://localhost:8080/api'
+
 const categoryHttp = axios.create({
-  baseURL: import.meta.env.VITE_CATEGORY_API_URL || 'http://localhost:8080/api',
+  baseURL: categoryBaseUrl,
   timeout: 10000,
 })
 
