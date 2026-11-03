@@ -52,13 +52,12 @@ export default function CategoriesPage() {
     setLoading(true)
     setError('')
 
-    const params = {
-      type: typeFilter || undefined,
-      activeOnly: statusFilter === 'active' ? true : undefined,
-    }
+    const request =
+      statusFilter === 'active'
+        ? categoryApi.listActive(typeFilter || undefined, controller.signal)
+        : categoryApi.list({ type: typeFilter || undefined }, controller.signal)
 
-    categoryApi
-      .list(params, controller.signal)
+    request
       .then((data) => {
         if (current === revision.current && !controller.signal.aborted) {
           setCategories(data)
