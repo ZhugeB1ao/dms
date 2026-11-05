@@ -1,0 +1,15 @@
+target/
+uploads/
+.git
+.gitignore
+.gitattributes
+.idea
+.vscode
+*.iml
+HELP.md
+Dockerfile
+.dockerignore
+compose.yaml
+.env
+.env.example
+models/
