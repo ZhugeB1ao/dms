@@ -109,6 +109,10 @@ it('denies unknown roles and external return URLs', () => {
 it.each([
   ['admin@demo.test', '/approvals', /403/],
   ['employee@demo.test', '/admin/users', /403/],
+  ['employee@demo.test', '/admin/departments', /403/],
+  ['manager@demo.test', '/admin/organizations', /403/],
+  ['admin@demo.test', '/admin/departments', 'Departments'],
+  ['admin@demo.test', '/admin/organizations', 'Organizations'],
   ['manager@demo.test', '/approvals', 'Pending approvals'],
 ])('guards %s visiting %s', async (email, path, title) => {
   await authHttp.post('/auth/login', { email, password: 'Demo12345!' })

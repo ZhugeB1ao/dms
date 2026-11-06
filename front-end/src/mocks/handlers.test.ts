@@ -3,6 +3,12 @@ import { setupServer } from 'msw/node'
 import { handlers, resetMock } from './handlers.ts'
 import { api, authHttp, session } from '../shared/api/http.ts'
 import type { CategoryItem } from '../features/categories/api/categoryApi.ts'
+import {
+  buildDepartmentRows,
+  getForbiddenParentIds,
+  type DepartmentItem,
+} from '../features/departments/api/departmentApi.ts'
+import type { OrganizationItem } from '../features/organizations/api/organizationApi.ts'
 
 const server = setupServer(...handlers)
 beforeAll(() => server.listen({ onUnhandledFrame: 'error' }))
@@ -150,4 +156,107 @@ it('xử lý thêm mới, trùng mã (409 Conflict), cập nhật và ngưng dù
     params: { type: 'DOC_TYPE' },
   })
   expect(activeRes.data.some((c) => c.id === created.data.id)).toBe(false)
+})
+
+it('phân quyền API đơn vị & cơ quan ngoài: chặn MANAGER / EMPLOYEE (403) nhưng mở /active (200)', async () => {
+  for (const email of ['manager@demo.test', 'employee@demo.test']) {
+    await login(email)
+    await expect(api.get('/departments/tree')).rejects.toMatchObject({
+      response: { status: 403 },
+    })
+    await expect(
+      api.post('/departments', { code: 'X', name: 'X' }),
+    ).rejects.toMatchObject({
+      response: { status: 403 },
+    })
+    await expect(api.get('/organizations')).rejects.toMatchObject({
+      response: { status: 403 },
+    })
+    expect((await api.get('/departments/active')).status).toBe(200)
+    expect((await api.get('/organizations/active')).status).toBe(200)
+  }
+})
+
+it('tạo cây đơn vị 3 cấp, chặn vòng lặp cha-con và chặn vượt quá 3 cấp', async () => {
+  await login('admin@demo.test')
+
+  const treeRes = await api.get<DepartmentItem[]>('/departments/tree')
+  const rows = buildDepartmentRows(treeRes.data)
+  expect(rows.map((r) => [r.code, r.depth])).toEqual([
+    ['BGD', 1],
+    ['P_HCTH', 2],
+    ['TO_VT', 3],
+    ['P_KHTC', 2],
+  ])
+
+  const forbiddenForRoot = getForbiddenParentIds(treeRes.data, 1)
+  expect(forbiddenForRoot.has(1)).toBe(true)
+  expect(forbiddenForRoot.has(2)).toBe(true)
+  expect(forbiddenForRoot.has(4)).toBe(true)
+
+  await expect(
+    api.put('/departments/1', {
+      code: 'BGD',
+      name: 'Ban Giám đốc',
+      parentId: 4,
+    }),
+  ).rejects.toMatchObject({
+    response: {
+      status: 409,
+      data: { fieldErrors: { parentId: expect.any(String) } },
+    },
+  })
+
+  await expect(
+    api.post('/departments', {
+      code: 'NHOM_4',
+      name: 'Nhóm Cấp 4',
+      parentId: 4,
+    }),
+  ).rejects.toMatchObject({
+    response: {
+      status: 409,
+      data: { fieldErrors: { parentId: expect.any(String) } },
+    },
+  })
+})
+
+it('chặn ngưng dùng đơn vị còn tài khoản hoạt động hoặc còn đơn vị con hoạt động', async () => {
+  await login('admin@demo.test')
+
+  await expect(api.patch('/departments/2/deactivate')).rejects.toMatchObject({
+    response: { status: 409 },
+  })
+
+  await expect(api.patch('/departments/1/deactivate')).rejects.toMatchObject({
+    response: { status: 409 },
+  })
+
+  const deactivated = await api.patch<DepartmentItem>(
+    '/departments/4/deactivate',
+  )
+  expect(deactivated.data.isActive).toBe(false)
+})
+
+it('quản lý cơ quan ngoài: thêm, sửa, chặn trùng tên (409) và ngưng dùng', async () => {
+  await login('admin@demo.test')
+
+  const created = await api.post<OrganizationItem>('/organizations', {
+    name: 'Ủy ban Nhân dân TP.HCM',
+    email: 'ubnd@tphcm.gov.vn',
+    address: '86 Lê Thánh Tôn, Quận 1',
+  })
+  expect(created.status).toBe(201)
+  expect(created.data.isActive).toBe(true)
+
+  await expect(
+    api.post('/organizations', { name: 'Ủy ban Nhân dân TP.HCM' }),
+  ).rejects.toMatchObject({
+    response: { status: 409 },
+  })
+
+  const deactivated = await api.patch<OrganizationItem>(
+    `/organizations/${created.data.id}/deactivate`,
+  )
+  expect(deactivated.data.isActive).toBe(false)
 })

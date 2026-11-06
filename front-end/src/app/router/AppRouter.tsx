@@ -2,6 +2,8 @@ import { Navigate, Outlet, Route, Routes, useLocation } from 'react-router'
 import { useAuth } from '../../features/auth/context/useAuth.ts'
 import AccountPage from '../../features/auth/pages/AccountPage.tsx'
 import CategoriesPage from '../../features/categories/pages/CategoriesPage.tsx'
+import DepartmentsPage from '../../features/departments/pages/DepartmentsPage.tsx'
+import OrganizationsPage from '../../features/organizations/pages/OrganizationsPage.tsx'
 import OcrPage from '../../features/ocr/pages/OcrPage.tsx'
 import ChatPage from '../../features/chat/pages/ChatPage.tsx'
 import AppLayout from '../../layouts/AppLayout/AppLayout.tsx'
@@ -61,6 +63,10 @@ export default function AppRouter() {
               element={
                 route.path === '/change-password' ? (
                   <AccountPage key="change" mode="change" />
+                ) : route.path === '/admin/departments' ? (
+                  <DepartmentsPage />
+                ) : route.path === '/admin/organizations' ? (
+                  <OrganizationsPage />
                 ) : route.path === '/admin/categories' ? (
                   <CategoriesPage />
                 ) : route.path === '/ocr' ? (
