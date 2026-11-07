@@ -1,10 +1,8 @@
 package com.example.authservice.controller;
 
-import com.example.authservice.config.CustomUserDetails;
 import com.example.authservice.dto.*;
 import com.example.authservice.service.AuthService;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
@@ -16,11 +14,6 @@ public class AuthController {
 
     public AuthController(AuthService authService) {
         this.authService = authService;
-    }
-
-    @PostMapping("/register")
-    public ResponseEntity<AuthResponse> register(@RequestBody RegisterRequest req) {
-        return ResponseEntity.ok(authService.register(req));
     }
 
     @PostMapping("/login")
@@ -37,37 +30,5 @@ public class AuthController {
     @PostMapping("/refresh")
     public ResponseEntity<AuthResponse> refresh(@RequestBody RefreshTokenRequest req) {
         return ResponseEntity.ok(authService.refreshToken(req));
-    }
-
-    @PostMapping("/change-password")
-    public ResponseEntity<?> changePassword(@AuthenticationPrincipal CustomUserDetails userDetails,
-                                            @RequestBody ChangePasswordRequest req) {
-        authService.changePassword(userDetails.getUser().getId(), req);
-        return ResponseEntity.ok(Map.of("message", "Đổi mật khẩu thành công, vui lòng đăng nhập lại!"));
-    }
-
-    @PostMapping("/forgot-password")
-    public ResponseEntity<?> forgotPassword(@RequestBody ForgotPasswordRequest req) {
-        authService.forgotPassword(req);
-        // Same answer whether or not the email exists, so it can't be used to probe accounts.
-        return ResponseEntity.ok(Map.of("message", "Nếu email tồn tại, hướng dẫn đặt lại mật khẩu đã được gửi."));
-    }
-
-    @PostMapping("/reset-password")
-    public ResponseEntity<?> resetPassword(@RequestBody ResetPasswordRequest req) {
-        authService.resetPassword(req);
-        return ResponseEntity.ok(Map.of("message", "Đặt lại mật khẩu thành công!"));
-    }
-
-    @GetMapping("/me")
-    public ResponseEntity<?> getCurrentUser(@AuthenticationPrincipal CustomUserDetails userDetails) {
-        var user = userDetails.getUser();
-        return ResponseEntity.ok(Map.of(
-                "id", user.getId(),
-                "username", user.getUsername(),
-                "email", user.getEmail(),
-                "departmentId", user.getDepartmentId(),
-                "role", user.getRole().name()
-        ));
     }
 }
