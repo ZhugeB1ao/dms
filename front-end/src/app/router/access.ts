@@ -21,6 +21,7 @@ export const routes: RouteConfig[] = [
   { path: '/approvals', label: 'Pending approvals', roles: ['MANAGER'] },
   { path: '/admin/users', label: 'Users', roles: ['ADMIN'] },
   { path: '/admin/departments', label: 'Departments', roles: ['ADMIN'] },
+  { path: '/admin/organizations', label: 'Organizations', roles: ['ADMIN'] },
   { path: '/admin/categories', label: 'Categories', roles: ['ADMIN'] },
   {
     path: '/change-password',

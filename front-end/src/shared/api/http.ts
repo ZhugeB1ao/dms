@@ -98,3 +98,35 @@ api.interceptors.response.use(
     return api(config)
   },
 )
+
+const rawCategoryBaseUrl = import.meta.env.VITE_CATEGORY_API_URL as
+  string | undefined
+const categoryBaseUrl =
+  import.meta.env.DEV &&
+  (!rawCategoryBaseUrl || rawCategoryBaseUrl === 'http://localhost:8080/api')
+    ? '/category-api'
+    : rawCategoryBaseUrl || 'http://localhost:8080/api'
+
+export const categoryHttp = axios.create({
+  baseURL: categoryBaseUrl,
+  timeout: 10000,
+})
+
+categoryHttp.interceptors.request.use((config) => {
+  if (session.token?.startsWith('mock-admin')) {
+    config.headers.Authorization = 'Bearer ADMIN'
+  } else if (session.token?.startsWith('mock-manager')) {
+    config.headers.Authorization = 'Bearer MANAGER'
+  } else if (session.token?.startsWith('mock-employee')) {
+    config.headers.Authorization = 'Bearer EMPLOYEE'
+  }
+  return config
+})
+
+export function getApiErrorMessage(err: unknown, fallback: string): string {
+  if (axios.isAxiosError(err)) {
+    const msg = err.response?.data?.message
+    if (typeof msg === 'string' && msg.trim()) return msg
+  }
+  return fallback
+}

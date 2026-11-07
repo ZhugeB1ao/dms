@@ -4,6 +4,11 @@ import type {
   CategoryItem,
   CategoryTypeCode,
 } from '../features/categories/api/categoryApi.ts'
+import {
+  getForbiddenParentIds,
+  type DepartmentItem,
+} from '../features/departments/api/departmentApi.ts'
+import type { OrganizationItem } from '../features/organizations/api/organizationApi.ts'
 
 const base = 'http://localhost/api/v1'
 const key = 'dms-mock-session-v1'
@@ -145,6 +150,56 @@ const initialCategories: CategoryItem[] = [
   },
 ]
 
+const initialDepartments: DepartmentItem[] = [
+  {
+    id: 1,
+    code: 'BGD',
+    name: 'Ban Giám đốc',
+    parentId: null,
+    isActive: true,
+  },
+  {
+    id: 2,
+    code: 'P_HCTH',
+    name: 'Phòng Hành chính - Tổng hợp',
+    parentId: 1,
+    isActive: true,
+  },
+  {
+    id: 3,
+    code: 'P_KHTC',
+    name: 'Phòng Kế hoạch - Tài chính',
+    parentId: 1,
+    isActive: true,
+  },
+  {
+    id: 4,
+    code: 'TO_VT',
+    name: 'Tổ Văn thư - Lưu trữ',
+    parentId: 2,
+    isActive: true,
+  },
+]
+
+const activeUserDepartmentIds = new Set<number>([2, 3])
+
+const initialOrganizations: OrganizationItem[] = [
+  {
+    id: 1,
+    name: 'Bộ Giáo dục và Đào tạo',
+    email: 'vanthu@moet.gov.vn',
+    address: 'Số 35 Đại Cồ Việt, Hai Bà Trưng, Hà Nội',
+    isActive: true,
+  },
+  {
+    id: 2,
+    name: 'Sở Khoa học và Công nghệ TP.HCM',
+    email: 'skhcn@tphcm.gov.vn',
+    address: 'Số 244 Điện Biên Phủ, Quận 3, TP.HCM',
+    isActive: true,
+  },
+]
+
 // Synthetic demo server state only. This is not a real HttpOnly cookie or token store.
 function load(): MockSessionState | null {
   try {
@@ -158,6 +213,10 @@ function load(): MockSessionState | null {
 let state: MockSessionState | null = load()
 let passwords: Record<string, string> = {}
 let categories: CategoryItem[] = initialCategories.map((c) => ({ ...c }))
+let departments: DepartmentItem[] = initialDepartments.map((d) => ({ ...d }))
+let organizations: OrganizationItem[] = initialOrganizations.map((o) => ({
+  ...o,
+}))
 
 function save() {
   if (state) sessionStorage.setItem(key, JSON.stringify(state))
@@ -168,6 +227,8 @@ export function resetMock() {
   state = null
   passwords = {}
   categories = initialCategories.map((c) => ({ ...c }))
+  departments = initialDepartments.map((d) => ({ ...d }))
+  organizations = initialOrganizations.map((o) => ({ ...o }))
   save()
 }
 
@@ -187,11 +248,19 @@ function token() {
 }
 
 function userFor(request: Request): User | null {
-  return state &&
-    (state.accessUntil ?? 0) > Date.now() &&
-    request.headers.get('Authorization') === `Bearer ${token()}`
-    ? (accounts.find((user) => user.id === state?.userId) ?? null)
-    : null
+  if (!state || (state.accessUntil ?? 0) <= Date.now()) return null
+  const auth = request.headers.get('Authorization')
+  const current = accounts.find((user) => user.id === state?.userId) ?? null
+  if (!current) return null
+  if (
+    auth === `Bearer ${token()}` ||
+    (auth === 'Bearer ADMIN' && current.roles.includes('ADMIN')) ||
+    (auth === 'Bearer MANAGER' && current.roles.includes('MANAGER')) ||
+    (auth === 'Bearer EMPLOYEE' && current.roles.includes('EMPLOYEE'))
+  ) {
+    return current
+  }
+  return null
 }
 
 function issue() {
@@ -410,4 +479,206 @@ export const handlers = [
     target.isActive = false
     return HttpResponse.json(target)
   }),
+  ...[base, '/category-api'].flatMap((prefix) => [
+    http.get(`${prefix}/departments/active`, ({ request }) => {
+      if (!userFor(request)) return unauthorized()
+      return HttpResponse.json(departments.filter((d) => d.isActive))
+    }),
+    http.get(`${prefix}/departments/tree`, ({ request }) => {
+      const check = requireRole(request, 'ADMIN')
+      if (check instanceof Response) return check
+      return HttpResponse.json(departments)
+    }),
+    http.post(`${prefix}/departments`, async ({ request }) => {
+      const check = requireRole(request, 'ADMIN')
+      if (check instanceof Response) return check
+      const body = (await request.json()) as {
+        code?: string
+        name?: string
+        parentId?: number | null
+      }
+      const code = (body.code || '').trim().toUpperCase()
+      if (departments.some((d) => d.code === code)) {
+        return fail(409, 'CONFLICT', 'Mã đơn vị đã tồn tại.', {
+          code: 'Mã đơn vị đã tồn tại.',
+        })
+      }
+      const parentId = body.parentId ? Number(body.parentId) : null
+      const forbidden = getForbiddenParentIds(departments, null)
+      if (
+        parentId !== null &&
+        (!departments.some((d) => d.id === parentId && d.isActive) ||
+          forbidden.has(parentId))
+      ) {
+        return fail(
+          409,
+          'CONFLICT',
+          'Đơn vị cha không hợp lệ hoặc vượt quá 3 cấp.',
+          { parentId: 'Đơn vị cha không hợp lệ hoặc vượt quá 3 cấp.' },
+        )
+      }
+      const nextId =
+        departments.length > 0
+          ? Math.max(...departments.map((d) => d.id)) + 1
+          : 1
+      const created: DepartmentItem = {
+        id: nextId,
+        code,
+        name: (body.name || '').trim(),
+        parentId,
+        isActive: true,
+      }
+      departments.push(created)
+      return HttpResponse.json(created, { status: 201 })
+    }),
+    http.put(`${prefix}/departments/:id`, async ({ request, params }) => {
+      const check = requireRole(request, 'ADMIN')
+      if (check instanceof Response) return check
+      const id = Number(params.id)
+      const target = departments.find((d) => d.id === id)
+      if (!target) return fail(404, 'NOT_FOUND', 'Department not found.')
+      const body = (await request.json()) as {
+        code?: string
+        name?: string
+        parentId?: number | null
+      }
+      const code = (body.code || target.code).trim().toUpperCase()
+      if (departments.some((d) => d.id !== id && d.code === code)) {
+        return fail(409, 'CONFLICT', 'Mã đơn vị đã tồn tại.', {
+          code: 'Mã đơn vị đã tồn tại.',
+        })
+      }
+      const parentId =
+        body.parentId !== undefined
+          ? body.parentId
+            ? Number(body.parentId)
+            : null
+          : target.parentId
+      const forbidden = getForbiddenParentIds(departments, id)
+      if (parentId !== null && forbidden.has(parentId)) {
+        return fail(
+          409,
+          'CONFLICT',
+          'Không thể chọn chính nó hoặc đơn vị con làm đơn vị cha (hoặc vượt quá 3 cấp).',
+          {
+            parentId:
+              'Không thể chọn chính nó hoặc đơn vị con làm đơn vị cha (hoặc vượt quá 3 cấp).',
+          },
+        )
+      }
+      target.code = code
+      target.name = (body.name ?? target.name).trim()
+      target.parentId = parentId
+      return HttpResponse.json(target)
+    }),
+    http.patch(
+      `${prefix}/departments/:id/deactivate`,
+      ({ request, params }) => {
+        const check = requireRole(request, 'ADMIN')
+        if (check instanceof Response) return check
+        const id = Number(params.id)
+        const target = departments.find((d) => d.id === id)
+        if (!target) return fail(404, 'NOT_FOUND', 'Department not found.')
+        if (activeUserDepartmentIds.has(id)) {
+          return fail(
+            409,
+            'CONFLICT',
+            'Không thể ngưng dùng đơn vị vì vẫn còn tài khoản đang hoạt động.',
+          )
+        }
+        if (departments.some((d) => d.parentId === id && d.isActive)) {
+          return fail(
+            409,
+            'CONFLICT',
+            'Không thể ngưng dùng đơn vị vì vẫn còn đơn vị trực thuộc đang hoạt động.',
+          )
+        }
+        target.isActive = false
+        return HttpResponse.json(target)
+      },
+    ),
+    http.get(`${prefix}/organizations/active`, ({ request }) => {
+      if (!userFor(request)) return unauthorized()
+      return HttpResponse.json(organizations.filter((o) => o.isActive))
+    }),
+    http.get(`${prefix}/organizations`, ({ request }) => {
+      const check = requireRole(request, 'ADMIN')
+      if (check instanceof Response) return check
+      return HttpResponse.json(organizations)
+    }),
+    http.post(`${prefix}/organizations`, async ({ request }) => {
+      const check = requireRole(request, 'ADMIN')
+      if (check instanceof Response) return check
+      const body = (await request.json()) as {
+        name?: string
+        email?: string
+        address?: string
+      }
+      const name = (body.name || '').trim()
+      if (
+        organizations.some((o) => o.name.toLowerCase() === name.toLowerCase())
+      ) {
+        return fail(409, 'CONFLICT', 'Tên cơ quan ngoài đã tồn tại.', {
+          name: 'Tên cơ quan ngoài đã tồn tại.',
+        })
+      }
+      const nextId =
+        organizations.length > 0
+          ? Math.max(...organizations.map((o) => o.id)) + 1
+          : 1
+      const created: OrganizationItem = {
+        id: nextId,
+        name,
+        email: body.email ? String(body.email).trim() : null,
+        address: body.address ? String(body.address).trim() : null,
+        isActive: true,
+      }
+      organizations.push(created)
+      return HttpResponse.json(created, { status: 201 })
+    }),
+    http.put(`${prefix}/organizations/:id`, async ({ request, params }) => {
+      const check = requireRole(request, 'ADMIN')
+      if (check instanceof Response) return check
+      const id = Number(params.id)
+      const target = organizations.find((o) => o.id === id)
+      if (!target) return fail(404, 'NOT_FOUND', 'Organization not found.')
+      const body = (await request.json()) as {
+        name?: string
+        email?: string
+        address?: string
+      }
+      const name = (body.name ?? target.name).trim()
+      if (
+        organizations.some(
+          (o) => o.id !== id && o.name.toLowerCase() === name.toLowerCase(),
+        )
+      ) {
+        return fail(409, 'CONFLICT', 'Tên cơ quan ngoài đã tồn tại.', {
+          name: 'Tên cơ quan ngoài đã tồn tại.',
+        })
+      }
+      target.name = name
+      target.email =
+        body.email !== undefined
+          ? String(body.email).trim() || null
+          : target.email
+      target.address =
+        body.address !== undefined
+          ? String(body.address).trim() || null
+          : target.address
+      return HttpResponse.json(target)
+    }),
+    http.patch(
+      `${prefix}/organizations/:id/deactivate`,
+      ({ request, params }) => {
+        const check = requireRole(request, 'ADMIN')
+        if (check instanceof Response) return check
+        const id = Number(params.id)
+        const target = organizations.find((o) => o.id === id)
+        if (!target) return fail(404, 'NOT_FOUND', 'Organization not found.')
+        target.isActive = false
+        return HttpResponse.json(target)
+      },
+    ),
+  ]),
 ]
