@@ -1,4 +1,5 @@
 <!-- gitnexus:start -->
+
 # GitNexus — Code Intelligence
 
 This project is indexed by GitNexus as **document-management-frontend** (285 symbols, 660 relationships, 21 execution flows).
@@ -24,22 +25,22 @@ This project is indexed by GitNexus as **document-management-frontend** (285 sym
 
 ## Resources
 
-| Resource | Use for |
-| --- | --- |
-| `gitnexus://repo/document-management-frontend/context` | Codebase overview, check index freshness |
-| `gitnexus://repo/document-management-frontend/clusters` | All functional areas |
-| `gitnexus://repo/document-management-frontend/processes` | All execution flows |
-| `gitnexus://repo/document-management-frontend/process/{name}` | Step-by-step execution trace |
+| Resource                                                      | Use for                                  |
+| ------------------------------------------------------------- | ---------------------------------------- |
+| `gitnexus://repo/document-management-frontend/context`        | Codebase overview, check index freshness |
+| `gitnexus://repo/document-management-frontend/clusters`       | All functional areas                     |
+| `gitnexus://repo/document-management-frontend/processes`      | All execution flows                      |
+| `gitnexus://repo/document-management-frontend/process/{name}` | Step-by-step execution trace             |
 
 ## CLI
 
-| Task | Read this skill file |
-| --- | --- |
-| Understand architecture / "How does X work?" | `.claude/skills/gitnexus-exploring/SKILL.md` |
-| Blast radius / "What breaks if I change X?" | `.claude/skills/gitnexus-impact-analysis/SKILL.md` |
-| Trace bugs / "Why is X failing?" | `.claude/skills/gitnexus-debugging/SKILL.md` |
-| Rename / extract / split / refactor | `.claude/skills/gitnexus-refactoring/SKILL.md` |
-| Tools, resources, schema reference | `.claude/skills/gitnexus-guide/SKILL.md` |
-| Index, status, clean, wiki CLI commands | `.claude/skills/gitnexus-cli/SKILL.md` |
+| Task                                         | Read this skill file                               |
+| -------------------------------------------- | -------------------------------------------------- |
+| Understand architecture / "How does X work?" | `.claude/skills/gitnexus-exploring/SKILL.md`       |
+| Blast radius / "What breaks if I change X?"  | `.claude/skills/gitnexus-impact-analysis/SKILL.md` |
+| Trace bugs / "Why is X failing?"             | `.claude/skills/gitnexus-debugging/SKILL.md`       |
+| Rename / extract / split / refactor          | `.claude/skills/gitnexus-refactoring/SKILL.md`     |
+| Tools, resources, schema reference           | `.claude/skills/gitnexus-guide/SKILL.md`           |
+| Index, status, clean, wiki CLI commands      | `.claude/skills/gitnexus-cli/SKILL.md`             |
 
 <!-- gitnexus:end -->
