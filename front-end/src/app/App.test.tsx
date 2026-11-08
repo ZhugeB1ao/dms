@@ -27,7 +27,7 @@ const renderPage = (path = '/login') =>
     </MemoryRouter>,
   )
 
-it('keeps the signup demo separate and links back to mock login', async () => {
+it('keeps the signup demo separate and links back to login', async () => {
   const user = userEvent.setup()
   renderPage('/')
   await user.click(screen.getByRole('button', { name: 'Sign up' }))
@@ -41,20 +41,18 @@ it('keeps the signup demo separate and links back to mock login', async () => {
 
 it('ignores a slow login after leaving the login page', async () => {
   server.use(
-    http.post('http://localhost/api/v1/auth/login', async () => {
+    http.post('/api/auth/login', async () => {
       await delay(150)
       return HttpResponse.json({
         accessToken: 'late',
-        user: { id: 'employee', roles: ['EMPLOYEE'] },
+        refreshToken: 'late-refresh',
+        tokenType: 'Bearer',
       })
     }),
   )
   const user = userEvent.setup()
   renderPage()
-  await user.type(
-    screen.getByRole('textbox', { name: 'Email' }),
-    'employee@demo.test',
-  )
+  await user.type(screen.getByRole('textbox', { name: 'Username' }), 'employee')
   const loginForm = within(screen.getByRole('region', { name: 'Log in' }))
   await user.type(loginForm.getByLabelText('Password'), 'Demo12345!')
   await user.click(loginForm.getByRole('button', { name: 'Log in' }))
@@ -62,16 +60,14 @@ it('ignores a slow login after leaving the login page', async () => {
   await new Promise((resolve) => setTimeout(resolve, 200))
   expect(session.token).toBeNull()
 })
-it('logs Employee in with scoped menu and logs out', async () => {
+
+it('logs Employee in via username + /auth/me with scoped menu and logs out', async () => {
   const user = userEvent.setup()
   renderPage('/admin/users')
   await screen.findByRole('heading', { name: 'Log in' })
   expect(screen.queryByRole('complementary', { name: 'Sidebar' })).toBeNull()
   expect(screen.queryByRole('button', { name: /sidebar/i })).toBeNull()
-  await user.type(
-    screen.getByRole('textbox', { name: 'Email' }),
-    'employee@demo.test',
-  )
+  await user.type(screen.getByRole('textbox', { name: 'Username' }), 'employee')
   const loginForm = within(screen.getByRole('region', { name: 'Log in' }))
   await user.type(loginForm.getByLabelText('Password'), 'Demo12345!')
   await user.click(loginForm.getByRole('button', { name: 'Log in' }))
@@ -92,10 +88,12 @@ it('logs Employee in with scoped menu and logs out', async () => {
   expect(screen.queryByRole('complementary', { name: 'Sidebar' })).toBeNull()
   expect(screen.queryByRole('button', { name: /sidebar/i })).toBeNull()
 })
+
 it('shows 404 for unknown routes', async () => {
   renderPage('/not-found')
   expect(await screen.findByRole('heading', { name: /404/ })).toBeVisible()
 })
+
 it('denies unknown roles and external return URLs', () => {
   expect(canAccess({ roles: ['UNKNOWN'] }, ['ADMIN'])).toBe(false)
   expect(safeDestination('//evil.test', { roles: ['ADMIN'] })).toBe(
@@ -106,16 +104,21 @@ it('denies unknown roles and external return URLs', () => {
     '/records?q=test',
   )
 })
+
 it.each([
-  ['admin@demo.test', '/approvals', /403/],
-  ['employee@demo.test', '/admin/users', /403/],
-  ['employee@demo.test', '/admin/departments', /403/],
-  ['manager@demo.test', '/admin/organizations', /403/],
-  ['admin@demo.test', '/admin/departments', 'Departments'],
-  ['admin@demo.test', '/admin/organizations', 'Organizations'],
-  ['manager@demo.test', '/approvals', 'Pending approvals'],
-])('guards %s visiting %s', async (email, path, title) => {
-  await authHttp.post('/auth/login', { email, password: 'Demo12345!' })
+  ['admin', '/approvals', /403/],
+  ['employee', '/admin/users', /403/],
+  ['employee', '/admin/departments', /403/],
+  ['manager', '/admin/organizations', /403/],
+  ['admin', '/admin/departments', 'Departments'],
+  ['admin', '/admin/organizations', 'Organizations'],
+  ['manager', '/approvals', 'Pending approvals'],
+])('guards %s visiting %s', async (username, path, title) => {
+  const { data } = await authHttp.post<{
+    accessToken: string
+    refreshToken: string
+  }>('/auth/login', { username, password: 'Demo12345!' })
+  session.set(data.accessToken, data.refreshToken)
   renderPage(path)
   expect(await screen.findByRole('heading', { name: title })).toBeVisible()
 })

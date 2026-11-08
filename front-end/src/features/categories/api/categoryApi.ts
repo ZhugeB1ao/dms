@@ -1,4 +1,4 @@
-import { categoryHttp } from '../../../shared/api/http.ts'
+import { backendHttp } from '../../../shared/api/http.ts'
 
 export type CategoryTypeCode =
   | 'DOC_TYPE'
@@ -33,12 +33,12 @@ export const CATEGORY_TYPES: Record<CategoryTypeCode, string> = {
 
 export const categoryApi = {
   list: (params?: CategoryFilterParams, signal?: AbortSignal) =>
-    categoryHttp
+    backendHttp
       .get<CategoryItem[]>('/categories', { params, signal })
       .then((r) => r.data),
 
   listActive: (type?: string, signal?: AbortSignal) =>
-    categoryHttp
+    backendHttp
       .get<CategoryItem[]>('/categories/active', {
         params: type ? { type } : undefined,
         signal,
@@ -46,17 +46,17 @@ export const categoryApi = {
       .then((r) => r.data),
 
   create: (values: Record<string, unknown>, signal?: AbortSignal) =>
-    categoryHttp
+    backendHttp
       .post<CategoryItem>('/categories', values, { signal })
       .then((r) => r.data),
 
   update: (id: number, values: Record<string, unknown>, signal?: AbortSignal) =>
-    categoryHttp
+    backendHttp
       .put<CategoryItem>(`/categories/${id}`, values, { signal })
       .then((r) => r.data),
 
   deactivate: (id: number, signal?: AbortSignal) =>
-    categoryHttp
+    backendHttp
       .patch<CategoryItem>(`/categories/${id}/deactivate`, null, { signal })
       .then((r) => r.data),
 }

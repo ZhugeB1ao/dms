@@ -51,6 +51,21 @@ public class JwtService {
         return parser.parseSignedClaims(token).getPayload();
     }
 
+    public String extractUsername(String token) {
+        return parse(token).getSubject();
+    }
+
+    public boolean isTokenValid(String token, com.example.authservice.entity.User user) {
+        try {
+            Claims claims = parse(token);
+            Integer tokenVersion = claims.get("tokenVersion", Integer.class);
+            return user.getUsername().equals(claims.getSubject())
+                    && (tokenVersion == null || tokenVersion == user.getTokenVersion());
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
     /** Token còn giá trị nếu đúng người dùng và tokenVersion chưa bị account-service tăng lên. */
     public boolean isTokenValid(Claims claims, AccountInfo user) {
         Integer tokenVersion = claims.get("tokenVersion", Integer.class);

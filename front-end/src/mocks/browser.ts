@@ -1,3 +1,3 @@
 import { setupWorker } from 'msw/browser'
-import { handlers } from './handlers.ts'
-export const worker = setupWorker(...handlers)
+import { browserHandlers } from './handlers.ts'
+export const worker = setupWorker(...browserHandlers)

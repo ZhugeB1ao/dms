@@ -186,5 +186,39 @@ class CategoryControllerTest {
                 .andExpect(jsonPath("$[0].isActive").value(true))
                 .andExpect(jsonPath("$[1].isActive").value(true));
     }
+
+    // =========================================================================
+    // TIÊU CHÍ 5: GATEWAY AUTH HEADERS (X-User-Role)
+    // =========================================================================
+
+    @Test
+    @DisplayName("Gateway header X-User-Role: ADMIN -> Trả về 200 OK")
+    void callApi_WithGatewayHeaderAdmin_Success() throws Exception {
+        when(categoryService.getCategories(null, false)).thenReturn(List.of());
+
+        mockMvc.perform(get("/api/categories")
+                        .header("X-User-Role", "ADMIN"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    @DisplayName("Gateway header X-User-Role: EMPLOYEE -> Bị chặn 403 Forbidden khi thao tác ADMIN")
+    void callApi_WithGatewayHeaderEmployee_Returns403() throws Exception {
+        String payload = """
+                {
+                    "type": "DOC_TYPE",
+                    "code": "CV",
+                    "name": "Công văn",
+                    "symbol": "CV"
+                }
+                """;
+
+        mockMvc.perform(post("/api/categories")
+                        .header("X-User-Role", "EMPLOYEE")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(payload))
+                .andExpect(status().isForbidden());
+    }
 }
+
 

@@ -89,7 +89,7 @@ export default function AccountPage({ mode }: { mode: AccountPageMode }) {
       ? [['email', 'Email', 'email']]
       : mode === 'login'
         ? [
-            ['email', 'Email', 'email'],
+            ['username', 'Username', 'text'],
             ['password', 'Password', 'password'],
           ]
         : [
@@ -120,14 +120,19 @@ export default function AccountPage({ mode }: { mode: AccountPageMode }) {
               type={type}
               required
               minLength={name === 'newPassword' ? 8 : undefined}
-              maxLength={type === 'password' ? 128 : 254}
-              autoComplete={
-                type === 'email'
-                  ? 'email'
-                  : name === 'newPassword' || name === 'confirmPassword'
-                    ? 'new-password'
-                    : 'current-password'
+              maxLength={
+                type === 'password' ? 128 : name === 'username' ? 50 : 254
               }
+              autoComplete={
+                name === 'username'
+                  ? 'username'
+                  : type === 'email'
+                    ? 'email'
+                    : name === 'newPassword' || name === 'confirmPassword'
+                      ? 'new-password'
+                      : 'current-password'
+              }
+              autoCapitalize={name === 'username' ? 'none' : undefined}
               spellCheck={false}
               aria-invalid={Boolean(errors[name])}
               aria-describedby={errors[name] ? `${name}-error` : undefined}

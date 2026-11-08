@@ -5,9 +5,10 @@ import { ocrApi } from '../api/ocrApi.ts'
 export default function OcrPage() {
   const [documents, setDocuments] = useState<DocumentItem[]>([])
   const [loading, setLoading] = useState(false)
-  const [selectedDocId, setSelectedDocId] = useState<number | null>(1)
+  const [selectedDocId, setSelectedDocId] = useState<number | null>(null)
   const [selectedDocText, setSelectedDocText] = useState<string>('')
   const [loadingText, setLoadingText] = useState(false)
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
   // Upload state
   const [title, setTitle] = useState('')
@@ -25,6 +26,7 @@ export default function OcrPage() {
     const controller = new AbortController()
     listAbortRef.current = controller
     setLoading(true)
+    setErrorMessage(null)
     try {
       const data = await ocrApi.fetchDocuments(controller.signal)
       if (!controller.signal.aborted) {
@@ -33,8 +35,14 @@ export default function OcrPage() {
           prev === null && data.length > 0 ? data[0].id : prev,
         )
       }
-    } catch {
-      // Aborted or offline
+    } catch (err) {
+      if (!controller.signal.aborted) {
+        setErrorMessage(
+          err instanceof Error
+            ? err.message
+            : 'Không thể kết nối tới dịch vụ quản lý tài liệu.',
+        )
+      }
     } finally {
       if (!controller.signal.aborted) setLoading(false)
     }
@@ -54,8 +62,14 @@ export default function OcrPage() {
       .then((txt) => {
         if (!controller.signal.aborted) setSelectedDocText(txt)
       })
-      .catch(() => {
-        // Aborted
+      .catch((err) => {
+        if (!controller.signal.aborted) {
+          setSelectedDocText(
+            err instanceof Error
+              ? `Không thể tải văn bản OCR: ${err.message}`
+              : 'Không thể tải văn bản OCR.',
+          )
+        }
       })
       .finally(() => {
         if (!controller.signal.aborted) setLoadingText(false)
@@ -68,25 +82,44 @@ export default function OcrPage() {
     if (!file) return
 
     setUploading(true)
+    setErrorMessage(null)
     try {
       await ocrApi.uploadDocument(file, title)
       setTitle('')
       setFile(null)
       if (fileInputRef.current) fileInputRef.current.value = ''
       await loadDocuments()
+    } catch (err) {
+      setErrorMessage(
+        err instanceof Error ? err.message : 'Tải tài liệu lên thất bại.',
+      )
     } finally {
       setUploading(false)
     }
   }
 
   const handleRetry = async (id: number) => {
-    await ocrApi.retryOcr(id)
-    await loadDocuments()
+    setErrorMessage(null)
+    try {
+      await ocrApi.retryOcr(id)
+      await loadDocuments()
+    } catch (err) {
+      setErrorMessage(
+        err instanceof Error ? err.message : 'Không thể chạy lại OCR.',
+      )
+    }
   }
 
   const handleEmbed = async (id: number) => {
-    await ocrApi.embedDocument(id)
-    await loadDocuments()
+    setErrorMessage(null)
+    try {
+      await ocrApi.embedDocument(id)
+      await loadDocuments()
+    } catch (err) {
+      setErrorMessage(
+        err instanceof Error ? err.message : 'Không thể nạp Vector AI.',
+      )
+    }
   }
 
   const handleCopyText = () => {
@@ -175,6 +208,15 @@ export default function OcrPage() {
           <span>Làm mới danh sách</span>
         </button>
       </div>
+
+      {errorMessage && (
+        <div
+          role="alert"
+          className="mx-6 mt-3 px-4 py-2.5 rounded-lg bg-red-500/10 border border-red-500/30 text-xs text-red-300"
+        >
+          {errorMessage}
+        </div>
+      )}
 
       {/* Main Grid: 2 columns */}
       <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-4 p-4 lg:p-6 overflow-hidden min-h-0">

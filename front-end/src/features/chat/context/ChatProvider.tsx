@@ -5,26 +5,18 @@ import type {
   SidePanelTab,
   SourceCitation,
 } from '../types.ts'
-import rawData from '../data/conversations.json'
 import { chatApi } from '../api/chatApi.ts'
 import { ChatContext } from './useChat.ts'
 
 export default function ChatProvider({ children }: { children: ReactNode }) {
   const [sidePanelTab, setSidePanelTab] = useState<SidePanelTab>('hidden')
   const [selectedSourceIndex, setSelectedSourceIndex] = useState(0)
-  const [conversations, setConversations] = useState<Conversation[]>(
-    rawData.conversations as Conversation[],
-  )
-  const [activeId, setActiveId] = useState<string | null>('1')
-  const [sources, setSources] = useState<SourceCitation[]>(
-    rawData.sources as SourceCitation[],
-  )
+  const [conversations, setConversations] = useState<Conversation[]>([])
+  const [activeId, setActiveId] = useState<string | null>(null)
+  const [sources, setSources] = useState<SourceCitation[]>([])
   const [isLoading, setIsLoading] = useState(false)
 
-  const activeConversation = conversations.find((c) => c.id === activeId)
-  const [currentMessages, setCurrentMessages] = useState<Message[]>(
-    activeConversation?.messages || [],
-  )
+  const [currentMessages, setCurrentMessages] = useState<Message[]>([])
 
   const streamAbortRef = useRef<AbortController | null>(null)
   useEffect(() => () => streamAbortRef.current?.abort(), [])
@@ -146,14 +138,17 @@ export default function ChatProvider({ children }: { children: ReactNode }) {
     } catch (err) {
       if (controller.signal.aborted) return
       const errMsg = err instanceof Error ? err.message : 'Có lỗi xảy ra'
-      setCurrentMessages([
-        ...updatedMessages,
-        {
-          id: `assistant-err-${Date.now()}`,
-          role: 'assistant',
-          content: `Xin lỗi, đã xảy ra lỗi: ${errMsg}`,
-        },
-      ])
+      const errorMessages = updatedMessages.map((msg) =>
+        msg.id === botMsgId
+          ? { ...msg, content: `Xin lỗi, đã xảy ra lỗi: ${errMsg}` }
+          : msg,
+      )
+      setCurrentMessages(errorMessages)
+      setConversations((prev) =>
+        prev.map((c) =>
+          c.id === currentChatId ? { ...c, messages: errorMessages } : c,
+        ),
+      )
     } finally {
       if (!controller.signal.aborted) setIsLoading(false)
     }

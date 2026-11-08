@@ -1,0 +1,101 @@
+# Docker Compose chỉ quản lý Database cho môi trường Dev cục bộ
+# Không chạy service/app trong Docker để tiết kiệm RAM/CPU và tránh nóng máy.
+name: dms-dev-databases
+
+services:
+  category-postgres:
+    image: postgres:16-alpine
+    container_name: dms-category-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: category_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5433:5432"
+    volumes:
+      - category_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d category_db"]
+      interval: 3s
+      timeout: 3s
+      retries: 10
+
+  department-postgres:
+    image: postgres:16-alpine
+    container_name: dms-department-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: department_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5434:5432"
+    volumes:
+      - department_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d department_db"]
+      interval: 3s
+      timeout: 3s
+      retries: 10
+
+  organization-postgres:
+    image: postgres:16-alpine
+    container_name: dms-organization-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: organization_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5435:5432"
+    volumes:
+      - organization_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d organization_db"]
+      interval: 3s
+      timeout: 3s
+      retries: 10
+
+  auth-postgres:
+    image: postgres:16-alpine
+    container_name: dms-auth-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: auth_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: Bao1234567890@
+    ports:
+      - "5436:5432"
+    volumes:
+      - auth_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d auth_db"]
+      interval: 3s
+      timeout: 3s
+      retries: 10
+
+  account-postgres:
+    image: postgres:16-alpine
+    container_name: dms-account-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: account_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5437:5432"
+    volumes:
+      - account_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d account_db"]
+      interval: 3s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  category_postgres_data:
+  department_postgres_data:
+  organization_postgres_data:
+  auth_postgres_data:
+  account_postgres_data:

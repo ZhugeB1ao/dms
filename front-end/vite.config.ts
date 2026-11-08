@@ -6,13 +6,9 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
   server: {
     proxy: {
-      '/category-api': {
-        target: 'http://localhost:8080/api',
+      '/api': {
+        target: 'http://localhost:9090',
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/category-api/, ''),
-        headers: {
-          Origin: 'http://localhost:5173',
-        },
       },
     },
   },

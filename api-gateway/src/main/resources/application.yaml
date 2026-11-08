@@ -14,18 +14,48 @@ spring:
             uri: ${AUTH_SERVICE_URL:http://localhost:8081}
             predicates:
               - Path=/api/auth/**
+            filters:
+              - RemoveRequestHeader=Origin
 
-          # ── Account Service: quản lý tài khoản (chỉ ADMIN, account-service tự kiểm tra role) ──
+          # ── Account Service: quản lý tài khoản (:8084) ──────────────────
           - id: account-service
-            uri: ${ACCOUNT_SERVICE_URL:http://localhost:8082}
+            uri: ${ACCOUNT_SERVICE_URL:http://localhost:8084}
             predicates:
               - Path=/api/accounts, /api/accounts/**
+            filters:
+              - RemoveRequestHeader=Origin
 
-          # ── File Service: quản lý tài liệu ──────────────────────────────
-          - id: file-service
-            uri: ${FILE_SERVICE_URL:http://localhost:8080}
+          # ── Category Service: danh mục thể loại văn bản (:8080) ─────────
+          - id: category-service
+            uri: ${CATEGORY_SERVICE_URL:http://localhost:8080}
             predicates:
-              - Path=/api/documents/**
+              - Path=/api/categories, /api/categories/**
+            filters:
+              - RemoveRequestHeader=Origin
+
+          # ── Department Service: danh mục phòng ban (:8082) ──────────────
+          - id: department-service
+            uri: ${DEPARTMENT_SERVICE_URL:http://localhost:8082}
+            predicates:
+              - Path=/api/departments, /api/departments/**
+            filters:
+              - RemoveRequestHeader=Origin
+
+          # ── Organization Service: cơ quan ban hành (:8083) ──────────────
+          - id: organization-service
+            uri: ${ORGANIZATION_SERVICE_URL:http://localhost:8083}
+            predicates:
+              - Path=/api/organizations, /api/organizations/**
+            filters:
+              - RemoveRequestHeader=Origin
+
+          # ── File Service: quản lý tài liệu & OCR (:8085) ────────────────
+          - id: file-service
+            uri: ${FILE_SERVICE_URL:http://localhost:8085}
+            predicates:
+              - Path=/api/documents, /api/documents/**
+            filters:
+              - RemoveRequestHeader=Origin
 
           # ── AI Service: hỏi đáp RAG & Giọng nói ─────────────────────────
           - id: ai-service-ask
@@ -69,6 +99,7 @@ info:
     description: API Gateway proxy cho file-service và ai-service
 
 gateway:
+  shared-secret: ${GATEWAY_SHARED_SECRET:}
   # Cấu hình rate limiting (in-memory token bucket, mỗi IP)
   rate-limit:
     # Requests per second được phép

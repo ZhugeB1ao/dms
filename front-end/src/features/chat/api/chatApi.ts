@@ -1,16 +1,19 @@
-import { session, refreshSession } from '../../../shared/api/http.ts'
+import { env } from '../../../config/env.ts'
+import { refreshSession, session } from '../../../shared/api/http.ts'
 import type { SourceCitation } from '../types.ts'
-import rawData from '../data/conversations.json'
-
-const CHAT_BASE_URL =
-  import.meta.env.VITE_CHAT_API_URL ||
-  import.meta.env.VITE_API_BASE_URL ||
-  'http://localhost:9090'
 
 interface RawApiSource {
   source: string
   text: string
   score: number
+}
+
+interface StreamPayload {
+  event?: string
+  sources?: RawApiSource[]
+  in_scope?: boolean
+  text?: string
+  detail?: string
 }
 
 export interface StreamCallbacks {
@@ -26,25 +29,23 @@ export const chatApi = {
     top_k?: number,
   ): Promise<void> {
     const { onSources, onDelta } = callbacks
+    const endpoint = `${env.apiBaseUrl}/ai/ask/stream`
+
+    const doFetch = (bearer: string | null) =>
+      fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(bearer ? { Authorization: `Bearer ${bearer}` } : {}),
+        },
+        body: JSON.stringify({
+          question,
+          ...(top_k !== undefined ? { top_k } : {}),
+        }),
+        signal,
+      })
+
     try {
-      const endpoint = CHAT_BASE_URL.includes('9090')
-        ? `${CHAT_BASE_URL}/api/ai/ask/stream`
-        : `${CHAT_BASE_URL}/ask/stream`
-
-      const doFetch = (bearer: string | null) =>
-        fetch(endpoint, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            ...(bearer ? { Authorization: `Bearer ${bearer}` } : {}),
-          },
-          body: JSON.stringify({
-            question,
-            ...(top_k !== undefined ? { top_k } : {}),
-          }),
-          signal,
-        })
-
       let res = await doFetch(session.token)
       if (res.status === 401) {
         const freshToken = await refreshSession().catch(() => null)
@@ -54,8 +55,15 @@ export const chatApi = {
       }
 
       if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}))
-        throw new Error(errorData.detail || `Lỗi máy chủ (${res.status})`)
+        const errorData = (await res.json().catch(() => ({}))) as {
+          detail?: string
+          message?: string
+        }
+        throw new Error(
+          errorData.detail ||
+            errorData.message ||
+            `Lỗi máy chủ (${res.status})`,
+        )
       }
       if (!res.body) {
         throw new Error('Trình duyệt không hỗ trợ ReadableStream.')
@@ -75,42 +83,42 @@ export const chatApi = {
 
         for (const line of lines) {
           const trimmedLine = line.trim()
-          if (trimmedLine.startsWith('data: ')) {
-            const raw = trimmedLine.slice(6).trim()
-            if (raw === '[DONE]') return
-            try {
-              const payload = JSON.parse(raw)
-              if (payload.event === 'sources' && onSources) {
-                const mappedSources: SourceCitation[] = (
-                  payload.sources || []
-                ).map((s: RawApiSource, index: number) => ({
-                  id: `src-${Date.now()}-${index}`,
-                  type: 'document',
-                  title: s.source,
-                  description: `Độ tương đồng: ${(s.score * 100).toFixed(1)}%`,
-                  text: s.text,
-                  score: s.score,
-                  fileType: s.source.split('.').pop()?.toUpperCase() || 'DOC',
-                }))
-                onSources(mappedSources, payload.in_scope ?? true)
-              } else if (payload.event === 'delta' && onDelta) {
-                onDelta(payload.text)
-              }
-            } catch {
-              // Ignore malformed SSE chunk
-            }
+          if (!trimmedLine.startsWith('data: ')) continue
+          const raw = trimmedLine.slice(6).trim()
+          if (raw === '[DONE]') return
+
+          let payload: StreamPayload | null = null
+          try {
+            payload = JSON.parse(raw) as StreamPayload
+          } catch {
+            // Ignore malformed SSE chunk
+          }
+          if (!payload) continue
+
+          if (payload.event === 'error') {
+            throw new Error(payload.detail || 'Lỗi từ dịch vụ AI.')
+          }
+          if (payload.event === 'sources' && onSources) {
+            const mappedSources: SourceCitation[] = (payload.sources || []).map(
+              (s: RawApiSource, index: number) => ({
+                id: `src-${Date.now()}-${index}`,
+                type: 'document',
+                title: s.source,
+                description: `Độ tương đồng: ${(s.score * 100).toFixed(1)}%`,
+                text: s.text,
+                score: s.score,
+                fileType: s.source.split('.').pop()?.toUpperCase() || 'DOC',
+              }),
+            )
+            onSources(mappedSources, payload.in_scope ?? true)
+          } else if (payload.event === 'delta' && onDelta && payload.text) {
+            onDelta(payload.text)
           }
         }
       }
-    } catch {
+    } catch (err) {
       if (signal?.aborted) return
-      if (onSources) {
-        onSources(rawData.sources as SourceCitation[], true)
-      }
-      if (onDelta) {
-        const mockText = `Mình đã nhận được câu hỏi: "${question}".\n\n(Lưu ý: Hiện đang ở chế độ mô phỏng Offline / MSW. Hãy kết nối RAG Backend tại ${CHAT_BASE_URL} để nhận câu trả lời dạng SSE stream từ mô hình RAG).`
-        onDelta(mockText)
-      }
+      throw err
     }
   },
 }

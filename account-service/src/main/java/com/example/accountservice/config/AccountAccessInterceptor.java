@@ -18,8 +18,21 @@ import org.springframework.web.servlet.HandlerInterceptor;
  */
 public class AccountAccessInterceptor implements HandlerInterceptor {
 
+    private final String gatewaySecret;
+
+    public AccountAccessInterceptor(String gatewaySecret) {
+        this.gatewaySecret = gatewaySecret != null ? gatewaySecret.trim() : "";
+    }
+
+    public AccountAccessInterceptor() {
+        this("");
+    }
+
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
+        if (!gatewaySecret.isEmpty() && !gatewaySecret.equals(request.getHeader("X-Gateway-Secret"))) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Direct access forbidden (call through the gateway)");
+        }
         String role = request.getHeader("X-User-Role");
         if (role == null || role.isBlank()) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Missing identity (call through the gateway)");

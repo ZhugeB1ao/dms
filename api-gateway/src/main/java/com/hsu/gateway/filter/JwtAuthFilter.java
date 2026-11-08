@@ -10,6 +10,7 @@ import jakarta.servlet.http.HttpServletRequestWrapper;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import net.devh.boot.grpc.client.inject.GrpcClient;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -25,11 +26,15 @@ public class JwtAuthFilter extends OncePerRequestFilter {
     @GrpcClient("auth-service")
     private TokenValidationServiceBlockingStub tokenValidationStub;
 
+    @Value("${gateway.shared-secret:}")
+    private String gatewaySecret;
+
     // Danh sách các URL công khai không cần kiểm tra Token
     private static final List<String> PUBLIC_PATHS = List.of(
             "/api/auth/login",
             "/api/auth/refresh",
             "/api/auth/logout",
+            "/api/auth/forgot-password",
             "/api/ai/health",
             "/health",
             "/actuator"
@@ -73,6 +78,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             requestWrapper.addHeader("X-User-Name", validationResponse.getUsername());
             requestWrapper.addHeader("X-User-Role", validationResponse.getRole());
             requestWrapper.addHeader("X-Department-Id", String.valueOf(validationResponse.getDepartmentId()));
+            requestWrapper.addHeader("X-Gateway-Secret", gatewaySecret != null ? gatewaySecret : "");
 
             chain.doFilter(requestWrapper, response);
 

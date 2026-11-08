@@ -6,6 +6,7 @@ import io.swagger.v3.oas.annotations.info.Info;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityScheme;
 import io.swagger.v3.oas.annotations.servers.Server;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
@@ -19,8 +20,11 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 @SecurityScheme(name = "bearerAuth", type = SecuritySchemeType.HTTP, scheme = "bearer", bearerFormat = "JWT")
 public class AppConfig implements WebMvcConfigurer {
 
+    @Value("${app.security.gateway-secret:}")
+    private String gatewaySecret;
+
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
-        registry.addInterceptor(new AccountAccessInterceptor()).addPathPatterns("/api/accounts", "/api/accounts/**");
+        registry.addInterceptor(new AccountAccessInterceptor(gatewaySecret)).addPathPatterns("/api/accounts", "/api/accounts/**");
     }
 }

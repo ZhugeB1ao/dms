@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 import axios from 'axios'
 import { session, refreshSession } from '../../../shared/api/http.ts'
 import type { User } from '../../../shared/types/domain.ts'
-import { authApi } from '../api/authApi.ts'
+import { authApi, normalizeUser } from '../api/authApi.ts'
 import { AuthContext, type AuthStatus } from './useAuth.ts'
 
 export default function AuthProvider({ children }: { children: ReactNode }) {
@@ -16,6 +16,10 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
   const revision = useRef(0)
 
   async function restore() {
+    if (!session.refreshToken) {
+      setState({ status: 'unauthenticated', user: null })
+      return
+    }
     const current = revision.current
     try {
       await refreshSession()
@@ -28,7 +32,8 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
           ? error.response?.status
           : undefined
         setState({
-          status: status === 401 ? 'unauthenticated' : 'error',
+          status:
+            status === 401 || status === 400 ? 'unauthenticated' : 'error',
           user: null,
         })
       }
@@ -51,15 +56,22 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
     const data = await authApi.login(values, signal)
     if (signal?.aborted || current !== revision.current)
       throw new Error('Session changed')
-    session.set(data.accessToken)
-    setState({ status: 'authenticated', user: data.user })
+    session.set(data.accessToken, data.refreshToken ?? null)
+    const user = data.user ? normalizeUser(data.user) : await authApi.me(signal)
+    if (signal?.aborted || current !== revision.current) {
+      session.clear()
+      throw new Error('Session changed')
+    }
+    setState({ status: 'authenticated', user })
   }
 
   async function logout() {
     revision.current++
+    const refreshToken = session.refreshToken
     session.clear()
+    if (!refreshToken) return
     try {
-      await authApi.logout()
+      await authApi.logout(refreshToken)
     } catch {
       /* Local logout must also work offline. */
     }

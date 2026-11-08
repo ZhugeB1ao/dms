@@ -16,17 +16,38 @@ declare module 'axios' {
 
 type SessionListener = () => void
 
+const REFRESH_TOKEN_KEY = 'dms_refresh_token'
 const listeners = new Set<SessionListener>()
 let generation = 0
 let refreshPromise: Promise<string> | null = null
 
 export const session = {
   token: null as string | null,
-  set(token: string | null) {
+  get refreshToken(): string | null {
+    try {
+      return localStorage.getItem(REFRESH_TOKEN_KEY)
+    } catch {
+      return null
+    }
+  },
+  set(token: string | null, refreshToken?: string | null) {
     this.token = token
+    if (refreshToken !== undefined) {
+      try {
+        if (refreshToken) localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken)
+        else localStorage.removeItem(REFRESH_TOKEN_KEY)
+      } catch {
+        /* Ignore storage errors */
+      }
+    }
   },
   clear() {
     this.token = null
+    try {
+      localStorage.removeItem(REFRESH_TOKEN_KEY)
+    } catch {
+      /* Ignore storage errors */
+    }
     generation++
     refreshPromise = null
     listeners.forEach((fn) => fn())
@@ -45,15 +66,20 @@ export const authHttp = axios.create({
   timeout: 10000,
 })
 export const api = axios.create({ baseURL: env.apiBaseUrl, timeout: 10000 })
+export const backendHttp = api
 
 export function refreshSession(): Promise<string> {
   if (!refreshPromise) {
     const current = generation
+    const storedRefresh = session.refreshToken
     const pending = authHttp
-      .post<{ accessToken: string }>('/auth/refresh')
+      .post<{ accessToken: string; refreshToken?: string }>(
+        '/auth/refresh',
+        storedRefresh ? { refreshToken: storedRefresh } : {},
+      )
       .then(({ data }) => {
         if (current !== generation) throw new Error('Session changed')
-        session.set(data.accessToken)
+        session.set(data.accessToken, data.refreshToken)
         return data.accessToken
       })
       .catch((error) => {
@@ -98,30 +124,6 @@ api.interceptors.response.use(
     return api(config)
   },
 )
-
-const rawCategoryBaseUrl = import.meta.env.VITE_CATEGORY_API_URL as
-  string | undefined
-const categoryBaseUrl =
-  import.meta.env.DEV &&
-  (!rawCategoryBaseUrl || rawCategoryBaseUrl === 'http://localhost:8080/api')
-    ? '/category-api'
-    : rawCategoryBaseUrl || 'http://localhost:8080/api'
-
-export const categoryHttp = axios.create({
-  baseURL: categoryBaseUrl,
-  timeout: 10000,
-})
-
-categoryHttp.interceptors.request.use((config) => {
-  if (session.token?.startsWith('mock-admin')) {
-    config.headers.Authorization = 'Bearer ADMIN'
-  } else if (session.token?.startsWith('mock-manager')) {
-    config.headers.Authorization = 'Bearer MANAGER'
-  } else if (session.token?.startsWith('mock-employee')) {
-    config.headers.Authorization = 'Bearer EMPLOYEE'
-  }
-  return config
-})
 
 export function getApiErrorMessage(err: unknown, fallback: string): string {
   if (axios.isAxiosError(err)) {

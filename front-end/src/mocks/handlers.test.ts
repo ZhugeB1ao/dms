@@ -2,6 +2,7 @@ import { beforeAll, afterAll, afterEach, expect, it } from 'vitest'
 import { setupServer } from 'msw/node'
 import { handlers, resetMock } from './handlers.ts'
 import { api, authHttp, session } from '../shared/api/http.ts'
+import { authApi } from '../features/auth/api/authApi.ts'
 import type { CategoryItem } from '../features/categories/api/categoryApi.ts'
 import {
   buildDepartmentRows,
@@ -18,43 +19,56 @@ afterEach(() => {
   session.clear()
   server.resetHandlers()
 })
-async function login(email: string) {
-  const { data } = await authHttp.post('/auth/login', {
-    email,
+
+async function login(username: string) {
+  const data = await authApi.login({
+    username,
     password: 'Demo12345!',
   })
-  session.set(data.accessToken)
-  return data
+  session.set(data.accessToken, data.refreshToken ?? null)
+  const user = await authApi.me()
+  return { ...data, user }
 }
+
 it.each([
-  ['admin@demo.test', 'ADMIN'],
-  ['manager@demo.test', 'MANAGER'],
-  ['employee@demo.test', 'EMPLOYEE'],
-])('returns the correct role for %s', async (email, role) => {
-  const result = await login(email)
-  expect(result.user.roles).toEqual([role])
-  expect(result.expiresIn).toBe(300)
-  expect((await api.get('/auth/me')).data.id).toBe(result.user.id)
-})
+  ['admin', 'ADMIN'],
+  ['manager', 'MANAGER'],
+  ['employee', 'EMPLOYEE'],
+])(
+  'normalizes BE /auth/me role to roles array for %s',
+  async (username, role) => {
+    const result = await login(username)
+    expect(result.tokenType).toBe('Bearer')
+    expect(result.refreshToken).toEqual(expect.any(String))
+    expect(result.user.username).toBe(username)
+    expect(result.user.displayName).toBe(username)
+    expect(result.user.roles).toEqual([role])
+    expect(typeof result.user.id).toBe('string')
+  },
+)
+
 it('enforces document scope for employee and manager', async () => {
-  for (const email of ['employee@demo.test', 'manager@demo.test']) {
-    await login(email)
+  for (const username of ['employee', 'manager']) {
+    await login(username)
     expect((await api.get('/demo/documents/a')).status).toBe(200)
     await expect(api.get('/demo/documents/b')).rejects.toMatchObject({
       response: { status: 403 },
     })
   }
 })
-it('refreshes an expired access token and logs out for expired refresh', async () => {
-  await login('employee@demo.test')
+
+it('refreshes an expired access token via refreshToken body and logs out for expired refresh', async () => {
+  await login('employee')
   await authHttp.post('/demo/session', { scenario: 'access-expired' })
   expect((await api.get('/demo/documents/a')).status).toBe(200)
   await authHttp.post('/demo/session', { scenario: 'refresh-expired' })
   await expect(api.get('/demo/documents/a')).rejects.toBeDefined()
   expect(session.token).toBeNull()
+  expect(session.refreshToken).toBeNull()
 })
+
 it('changes password, revokes session, rejects old password and accepts new password', async () => {
-  await login('employee@demo.test')
+  await login('employee')
   await expect(
     api.post('/auth/change-password', {
       currentPassword: 'wrong',
@@ -69,18 +83,19 @@ it('changes password, revokes session, rejects old password and accepts new pass
       })
     ).status,
   ).toBe(204)
-  await expect(login('employee@demo.test')).rejects.toMatchObject({
+  await expect(login('employee')).rejects.toMatchObject({
     response: { status: 401 },
   })
   expect(
     (
       await authHttp.post('/auth/login', {
-        email: 'employee@demo.test',
+        username: 'employee',
         password: 'Next12345!',
       })
     ).status,
   ).toBe(200)
 })
+
 it('responds neutrally to known and unknown recovery emails', async () => {
   const known = await authHttp.post('/auth/forgot-password', {
     email: 'employee@demo.test',
@@ -93,24 +108,24 @@ it('responds neutrally to known and unknown recovery emails', async () => {
 })
 
 it('cho phép ADMIN quản lý danh mục và chặn MANAGER / EMPLOYEE với 403 Forbidden', async () => {
-  await login('manager@demo.test')
+  await login('manager')
   await expect(api.get('/categories')).rejects.toMatchObject({
     response: { status: 403 },
   })
 
-  await login('employee@demo.test')
+  await login('employee')
   await expect(api.get('/categories')).rejects.toMatchObject({
     response: { status: 403 },
   })
 
-  await login('admin@demo.test')
+  await login('admin')
   const res = await api.get('/categories')
   expect(res.status).toBe(200)
   expect(res.data.length).toBe(12)
 })
 
 it('xử lý thêm mới, trùng mã (409 Conflict), cập nhật và ngưng dùng danh mục', async () => {
-  await login('admin@demo.test')
+  await login('admin')
 
   const created = await api.post('/categories', {
     type: 'DOC_TYPE',
@@ -159,8 +174,8 @@ it('xử lý thêm mới, trùng mã (409 Conflict), cập nhật và ngưng dù
 })
 
 it('phân quyền API đơn vị & cơ quan ngoài: chặn MANAGER / EMPLOYEE (403) nhưng mở /active (200)', async () => {
-  for (const email of ['manager@demo.test', 'employee@demo.test']) {
-    await login(email)
+  for (const username of ['manager', 'employee']) {
+    await login(username)
     await expect(api.get('/departments/tree')).rejects.toMatchObject({
       response: { status: 403 },
     })
@@ -178,7 +193,7 @@ it('phân quyền API đơn vị & cơ quan ngoài: chặn MANAGER / EMPLOYEE (4
 })
 
 it('tạo cây đơn vị 3 cấp, chặn vòng lặp cha-con và chặn vượt quá 3 cấp', async () => {
-  await login('admin@demo.test')
+  await login('admin')
 
   const treeRes = await api.get<DepartmentItem[]>('/departments/tree')
   const rows = buildDepartmentRows(treeRes.data)
@@ -222,7 +237,7 @@ it('tạo cây đơn vị 3 cấp, chặn vòng lặp cha-con và chặn vượt
 })
 
 it('chặn ngưng dùng đơn vị còn tài khoản hoạt động hoặc còn đơn vị con hoạt động', async () => {
-  await login('admin@demo.test')
+  await login('admin')
 
   await expect(api.patch('/departments/2/deactivate')).rejects.toMatchObject({
     response: { status: 409 },
@@ -239,7 +254,7 @@ it('chặn ngưng dùng đơn vị còn tài khoản hoạt động hoặc còn 
 })
 
 it('quản lý cơ quan ngoài: thêm, sửa, chặn trùng tên (409) và ngưng dùng', async () => {
-  await login('admin@demo.test')
+  await login('admin')
 
   const created = await api.post<OrganizationItem>('/organizations', {
     name: 'Ủy ban Nhân dân TP.HCM',

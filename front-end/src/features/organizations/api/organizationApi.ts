@@ -1,4 +1,4 @@
-import { categoryHttp } from '../../../shared/api/http.ts'
+import { backendHttp } from '../../../shared/api/http.ts'
 
 export interface OrganizationItem {
   id: number
@@ -10,27 +10,27 @@ export interface OrganizationItem {
 
 export const organizationApi = {
   list: (signal?: AbortSignal) =>
-    categoryHttp
+    backendHttp
       .get<OrganizationItem[]>('/organizations', { signal })
       .then((r) => r.data),
 
   listActive: (signal?: AbortSignal) =>
-    categoryHttp
+    backendHttp
       .get<OrganizationItem[]>('/organizations/active', { signal })
       .then((r) => r.data),
 
   create: (values: Record<string, unknown>, signal?: AbortSignal) =>
-    categoryHttp
+    backendHttp
       .post<OrganizationItem>('/organizations', values, { signal })
       .then((r) => r.data),
 
   update: (id: number, values: Record<string, unknown>, signal?: AbortSignal) =>
-    categoryHttp
+    backendHttp
       .put<OrganizationItem>(`/organizations/${id}`, values, { signal })
       .then((r) => r.data),
 
   deactivate: (id: number, signal?: AbortSignal) =>
-    categoryHttp
+    backendHttp
       .patch<OrganizationItem>(`/organizations/${id}/deactivate`, null, {
         signal,
       })

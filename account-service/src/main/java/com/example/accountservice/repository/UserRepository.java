@@ -19,6 +19,9 @@ public interface UserRepository extends JpaRepository<User, Long>, JpaSpecificat
 
     boolean existsByEmailIgnoreCaseAndIdNot(String email, long id);
 
+    @Query("select count(u) > 0 from User u where u.departmentId = :departmentId and u.isActive = true")
+    boolean existsActiveByDepartmentId(@Param("departmentId") long departmentId);
+
     // Hai lệnh dưới là UPDATE nguyên tử, chỉ đụng đúng các cột này: ghi xong sau khi đã gọi auth-service băm mật khẩu mà không
     // giữ kết nối DB lúc chờ mạng, và không ghi đè thay đổi đồng thời ở cột khác (vd is_active). Trả về số dòng đã cập nhật (0 = không có id).
 

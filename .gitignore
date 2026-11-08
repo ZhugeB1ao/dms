@@ -16,6 +16,8 @@ Thumbs.db
 .env
 .env.local
 .env.*.local
+.logs/
+*.pids
 
 # Node / Frontend build
 node_modules/
