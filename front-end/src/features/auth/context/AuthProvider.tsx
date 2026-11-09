@@ -14,6 +14,11 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
   )
   const bootstrap = useRef<Promise<void> | null>(null)
   const revision = useRef(0)
+  const activeUserId = useRef<string | null>(null)
+  const intentionalClear = useRef(false)
+  const [sessionNotice, setSessionNotice] = useState<
+    'expired' | 'passwordChanged' | null
+  >(null)
 
   async function restore() {
     if (!session.refreshToken) {
@@ -24,8 +29,10 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
     try {
       await refreshSession()
       const user = await authApi.me()
-      if (current === revision.current)
+      if (current === revision.current) {
+        activeUserId.current = user.id
         setState({ status: 'authenticated', user })
+      }
     } catch (error) {
       if (current === revision.current) {
         const status = axios.isAxiosError(error)
@@ -42,6 +49,11 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const unsubscribe = session.subscribe(() => {
+      if (activeUserId.current) {
+        revision.current++
+        if (!intentionalClear.current) setSessionNotice('expired')
+      }
+      activeUserId.current = null
       setState({ status: 'unauthenticated', user: null })
     })
     // Share bootstrap across StrictMode's effect replay.
@@ -51,7 +63,10 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
 
   async function login(values: Record<string, unknown>, signal?: AbortSignal) {
     revision.current++
+    intentionalClear.current = true
     session.clear()
+    intentionalClear.current = false
+    setSessionNotice(null)
     const current = revision.current
     const data = await authApi.login(values, signal)
     if (signal?.aborted || current !== revision.current)
@@ -62,13 +77,17 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
       session.clear()
       throw new Error('Session changed')
     }
+    activeUserId.current = user.id
     setState({ status: 'authenticated', user })
   }
 
-  async function logout() {
+  async function logout(notice?: 'passwordChanged') {
     revision.current++
     const refreshToken = session.refreshToken
+    intentionalClear.current = true
     session.clear()
+    intentionalClear.current = false
+    setSessionNotice(notice === 'passwordChanged' ? 'passwordChanged' : null)
     if (!refreshToken) return
     try {
       await authApi.logout(refreshToken)
@@ -77,12 +96,37 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  async function reloadUser(signal?: AbortSignal) {
+    const current = revision.current
+    const userId = activeUserId.current
+    try {
+      const user = await authApi.me(signal)
+      if (
+        !signal?.aborted &&
+        current === revision.current &&
+        userId === activeUserId.current &&
+        user.id === userId
+      )
+        setState({ status: 'authenticated', user })
+    } catch (error) {
+      if (
+        current === revision.current &&
+        axios.isAxiosError(error) &&
+        error.response?.status === 401
+      )
+        session.clear()
+      throw error
+    }
+  }
+
   return (
     <AuthContext
       value={{
         ...state,
+        sessionNotice,
         login,
         logout,
+        reloadUser,
         retryBootstrap: () => {
           setState({ status: 'loading', user: null })
           return restore()

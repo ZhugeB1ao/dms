@@ -70,7 +70,7 @@ export default function AccountPage({ mode }: { mode: AccountPageMode }) {
           },
           controller.signal,
         )
-        await auth.logout()
+        await auth.logout('passwordChanged')
       }
       form.reset()
     } catch (error) {
@@ -103,6 +103,20 @@ export default function AccountPage({ mode }: { mode: AccountPageMode }) {
       <h1 id="account-title" className="mt-3 text-2xl">
         {title}
       </h1>
+      {mode === 'login' &&
+        ((location.state as { notice?: string } | null)?.notice ??
+          auth.sessionNotice) === 'expired' && (
+          <p role="alert" className="mt-4">
+            Your session has expired. Please log in again.
+          </p>
+        )}
+      {mode === 'login' &&
+        ((location.state as { notice?: string } | null)?.notice ??
+          auth.sessionNotice) === 'passwordChanged' && (
+          <p role="status" className="mt-4">
+            Password changed successfully. Please log in again.
+          </p>
+        )}
       <form
         ref={formRef}
         onSubmit={submit}

@@ -1,5 +1,7 @@
 # DMS auth proposal v0.1.0
 
+Account management extension: login/me/refresh/change-password now read the same mock account store as `/users`. Disabled accounts cannot log in or refresh; disabling/resetting revokes old synthetic session metadata. `/auth/me` and login keep the original User schema; expanded profile is `/users/me`. All account/password mutations reset on reload. See `users-contract.md`; these additions do not imply real backend integration.
+
 FE tự chốt và dùng để triển khai mock, không yêu cầu BE xác nhận. OpenAPI nằm ở
 `openapi-auth.proposal.yaml` (biểu diễn JSON, hợp lệ theo cú pháp YAML).
 

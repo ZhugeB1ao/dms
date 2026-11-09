@@ -22,10 +22,10 @@ export default function OrganizationsPage() {
     createItem: organizationApi.create,
     updateItem: organizationApi.update,
     deactivateItem: organizationApi.deactivate,
-    loadErrorMessage: 'Không thể tải danh sách cơ quan ngoài.',
-    deactivateErrorMessage: 'Không thể ngưng dùng cơ quan ngoài.',
+    loadErrorMessage: 'Unable to load external organizations.',
+    deactivateErrorMessage: 'Unable to deactivate this organization.',
     conflictField: 'name',
-    conflictDefaultMessage: 'Tên cơ quan đã tồn tại.',
+    conflictDefaultMessage: 'This organization name already exists.',
   })
 
   const filtered = crud.items.filter((item) => {
@@ -138,7 +138,7 @@ export default function OrganizationsPage() {
       >
         <div>
           <label htmlFor="organization-name" className="field-label">
-            Tên cơ quan ngoài (Name) *
+            Organization name *
           </label>
           <input
             id="organization-name"
@@ -147,7 +147,7 @@ export default function OrganizationsPage() {
             defaultValue={crud.editingItem?.name || ''}
             required
             maxLength={255}
-            placeholder="VD: Sở Giáo dục và Đào tạo..."
+            placeholder="e.g. Department of Education and Training…"
             aria-invalid={Boolean(crud.modalErrors.name) || undefined}
           />
           {crud.modalErrors.name && (
@@ -157,7 +157,7 @@ export default function OrganizationsPage() {
 
         <div>
           <label htmlFor="organization-email" className="field-label">
-            Email liên hệ (Email)
+            Contact email
           </label>
           <input
             id="organization-email"
@@ -175,7 +175,7 @@ export default function OrganizationsPage() {
 
         <div>
           <label htmlFor="organization-address" className="field-label">
-            Địa chỉ (Address)
+            Address
           </label>
           <input
             id="organization-address"
@@ -183,7 +183,7 @@ export default function OrganizationsPage() {
             type="text"
             defaultValue={crud.editingItem?.address || ''}
             maxLength={500}
-            placeholder="VD: Số 8 Nguyễn Văn Tráng, Quận 1, TP.HCM"
+            placeholder="e.g. 8 Nguyen Van Trang, District 1, Ho Chi Minh City"
             aria-invalid={Boolean(crud.modalErrors.address) || undefined}
           />
           {crud.modalErrors.address && (
@@ -195,19 +195,19 @@ export default function OrganizationsPage() {
       <ConfirmDeactivateDialog
         confirmModalRef={crud.confirmModalRef}
         confirmTitleId={crud.confirmTitleId}
-        title="Ngưng dùng cơ quan ngoài"
+        title="Deactivate external organization"
         errorMessage={crud.deactivateError}
         submitting={crud.submitting}
         onClose={crud.closeConfirmModal}
         onConfirm={crud.handleConfirmDeactivate}
         description={
           <>
-            Bạn có chắc chắn muốn ngưng dùng cơ quan{' '}
+            Are you sure you want to deactivate the organization{' '}
             <strong className="text-white font-mono">
               {crud.deactivatingItem?.name}
             </strong>
-            ? Cơ quan sau khi ngưng dùng sẽ không xuất hiện trong các dropdown
-            tạo mới.
+            ? A deactivated organization no longer appears in the dropdowns used
+            to create new records.
           </>
         }
       />

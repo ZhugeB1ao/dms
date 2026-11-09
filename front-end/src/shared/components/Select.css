@@ -1,0 +1,150 @@
+/* Shared tokens for filters and form fields. Unsupported pickers remain native. */
+:root {
+  --select-surface: #121212;
+  --select-menu: #202020;
+  --select-border: #383838;
+  --select-hover: #343434;
+  --select-selected: #2d2d2d;
+  --select-text: #f0f0f0;
+  --select-muted: #a6a6a6;
+}
+
+select.select-control {
+  appearance: none;
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  padding: 10px 38px 10px 14px;
+  border: 1px solid var(--select-border);
+  border-radius: 12px;
+  background-color: var(--select-surface);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23a6a6a6' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m7 10 5 5 5-5'/%3E%3C/svg%3E");
+  background-position: right 12px center;
+  background-repeat: no-repeat;
+  color: var(--select-text);
+  font: inherit;
+  font-size: 14px;
+  line-height: 22px;
+  cursor: pointer;
+  transition:
+    border-color 150ms ease,
+    box-shadow 150ms ease;
+}
+select.select-control:hover:not(:disabled) {
+  border-color: #5a5a5a;
+}
+select.select-control:focus-visible {
+  border-color: #929292;
+  outline: 2px solid #bdbdbd;
+  outline-offset: 2px;
+}
+select.select-control[aria-invalid='true'] {
+  border-color: #f5a0a0;
+}
+select.select-control:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+select.select-control.category-filter-select {
+  width: auto;
+  min-width: 148px;
+}
+
+@supports (appearance: base-select) {
+  select.select-control,
+  select.select-control::picker(select) {
+    appearance: base-select;
+  }
+
+  select.select-control {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    padding-inline: 14px;
+    background-image: none;
+  }
+  select.select-control::picker-icon {
+    color: var(--select-muted);
+    margin-inline-start: auto;
+    transition: rotate 150ms ease;
+  }
+  select.select-control:open::picker-icon {
+    rotate: 180deg;
+  }
+  select.select-control:open {
+    border-color: #777;
+  }
+  select.select-control::picker(select) {
+    /* Prefer the default downward placement; flip only if it does not fit. */
+    position-try-order: normal;
+    min-inline-size: anchor-size(self-inline);
+    max-inline-size: calc(100vw - 24px);
+    max-block-size: min(320px, 60dvh);
+    margin-block: 6px;
+    padding: 6px;
+    border: 1px solid #404040;
+    border-radius: 14px;
+    background: var(--select-menu);
+    color: var(--select-text);
+    box-shadow:
+      0 12px 36px rgb(0 0 0 / 45%),
+      0 2px 8px rgb(0 0 0 / 25%);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    scrollbar-color: #555 transparent;
+    font: inherit;
+    font-size: 14px;
+  }
+  select.select-control option {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 40px;
+    margin: 2px 0;
+    padding: 9px 12px;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--select-text);
+    line-height: 20px;
+    overflow-wrap: anywhere;
+    cursor: pointer;
+  }
+  select.select-control option:checked {
+    background: var(--select-selected);
+    font-weight: 500;
+  }
+  select.select-control option:hover:not(:disabled),
+  select.select-control option:focus-visible {
+    background: var(--select-hover);
+    outline: none;
+  }
+  select.select-control option::checkmark {
+    order: 1;
+    margin-inline-start: auto;
+    color: #dedede;
+  }
+  select.select-control option:disabled {
+    color: #848484;
+    cursor: not-allowed;
+  }
+  select.select-control optgroup {
+    color: var(--select-muted);
+    font-weight: 500;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  select.select-control,
+  select.select-control::picker-icon {
+    transition: none;
+  }
+}
+@media (forced-colors: active) {
+  select.select-control {
+    border-color: ButtonText;
+  }
+  select.select-control option:checked {
+    outline: 1px solid Highlight;
+  }
+}

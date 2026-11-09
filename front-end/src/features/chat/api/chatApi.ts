@@ -62,11 +62,11 @@ export const chatApi = {
         throw new Error(
           errorData.detail ||
             errorData.message ||
-            `Lỗi máy chủ (${res.status})`,
+            `Server error (${res.status})`,
         )
       }
       if (!res.body) {
-        throw new Error('Trình duyệt không hỗ trợ ReadableStream.')
+        throw new Error('This browser does not support ReadableStream.')
       }
 
       const reader = res.body.getReader()
@@ -96,7 +96,7 @@ export const chatApi = {
           if (!payload) continue
 
           if (payload.event === 'error') {
-            throw new Error(payload.detail || 'Lỗi từ dịch vụ AI.')
+            throw new Error(payload.detail || 'The AI service returned an error.')
           }
           if (payload.event === 'sources' && onSources) {
             const mappedSources: SourceCitation[] = (payload.sources || []).map(
@@ -104,7 +104,7 @@ export const chatApi = {
                 id: `src-${Date.now()}-${index}`,
                 type: 'document',
                 title: s.source,
-                description: `Độ tương đồng: ${(s.score * 100).toFixed(1)}%`,
+                description: `Similarity: ${(s.score * 100).toFixed(1)}%`,
                 text: s.text,
                 score: s.score,
                 fileType: s.source.split('.').pop()?.toUpperCase() || 'DOC',

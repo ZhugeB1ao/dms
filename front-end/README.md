@@ -1,5 +1,31 @@
 # Base UI
 
+## Interface language
+
+English is the application UI language. Use English for navigation, headings, buttons, labels, placeholders, accessibility text, validation, notifications and authored demo data. Use English locale formatting for displayed dates/times. Keep route paths, API field names and enum codes stable. Preserve user-entered names, document contents and backend business data in their original language; interface translation must not rewrite that content. Project documentation may remain Vietnamese.
+
+## Shared dropdown
+
+Use `src/shared/components/Select.tsx` for single-selection dropdowns in filters and forms. It accepts native select props, including `value`/`onChange`, `defaultValue`, `name`, `required`, `disabled`, `ref` and ARIA attributes. Supply a visible linked label and normal option children:
+
+```tsx
+<label htmlFor="department">Department</label>
+<Select id="department" name="departmentId" defaultValue="" required>
+  <option value="">Select a department</option>
+  <option value="office-a">Administration</option>
+</Select>
+```
+
+`Select.css` owns shared colors, focus, disabled/error states and picker styling. Override the `--select-*` tokens to theme the dropdown across pages; use `className` only for page-specific layout. Browser-native keyboard/type-ahead, validation and FormData are retained. The styled popup uses [customizable native selects](https://developer.mozilla.org/en-US/docs/Learn_web_development/Extensions/Forms/Customizable_select); browsers without support retain their native option popup. No dropdown library is required.
+
+Picker placement prefers opening downward (`position-try-order: normal`); the browser only uses an upward fallback when the default placement cannot fit. Avoid `most-block-size`, which can choose the upper side even when there is sufficient space below. Real-browser regression coverage checks filters, pagination, create/edit account and category forms, including constrained viewport cases.
+
+## Account management and personal profile
+
+Admin can manage accounts at `/admin/users`: search, combined department/role/status filters, pagination, create/edit, disable/reactivate and reset password with confirmation. All three roles can view their own `/profile` and use the existing `/change-password` page. Unauthorized menus/actions are hidden or disabled and mock endpoints enforce the same role checks.
+
+This feature uses MSW and the shared authenticated API, including department/position dropdowns; category-service is not needed for this workflow. The mock contains 28 accounts and retains the original four demo logins. New/edited accounts and passwords are in memory and reset on reload. Password reset sends no email. See [user API proposal](docs/api/users-contract.md) and [acceptance notes](docs/account-management-acceptance.md). Real backend integration is a later verification step.
+
 ## Project planning documents
 
 - [Business analysis proposal](docs/superpowers/specs/2026-10-29-document-records-business-analysis.md): proposed document workflows and roles.

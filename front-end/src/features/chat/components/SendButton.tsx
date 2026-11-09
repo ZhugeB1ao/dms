@@ -8,7 +8,7 @@ export interface SendButtonProps {
 export function SendButton({ onClick, disabled }: SendButtonProps) {
   return (
     <button
-      aria-label="Gửi tin nhắn"
+      aria-label="Send message"
       className="w-[34px] h-[34px] bg-[#1d63d6] hover:bg-[#256deb] text-white rounded-full flex items-center justify-center transition-all ml-0.5 shadow-sm disabled:opacity-50"
       type="button"
       onClick={onClick}

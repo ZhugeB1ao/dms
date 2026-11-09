@@ -10,35 +10,35 @@ export function MessageActions() {
   return (
     <div className="flex items-center gap-3 pt-1 text-[#8f8f8f]">
       <button
-        aria-label="Sao chép"
+        aria-label="Copy"
         className="hover:text-white transition-colors"
         type="button"
       >
         <CopyIcon />
       </button>
       <button
-        aria-label="Không thích"
+        aria-label="Dislike"
         className="hover:text-white transition-colors"
         type="button"
       >
         <ThumbsDownIcon />
       </button>
       <button
-        aria-label="Chia sẻ"
+        aria-label="Share"
         className="hover:text-white transition-colors"
         type="button"
       >
         <ShareIcon />
       </button>
       <button
-        aria-label="Tạo lại phản hồi"
+        aria-label="Regenerate response"
         className="hover:text-white transition-colors"
         type="button"
       >
         <RegenerateIcon />
       </button>
       <button
-        aria-label="Tùy chọn khác"
+        aria-label="More options"
         className="hover:text-white transition-colors"
         type="button"
       >

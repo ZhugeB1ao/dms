@@ -18,7 +18,7 @@ function mapBackendDoc(raw: Record<string, unknown>): DocumentItem {
     title:
       (raw.title as string) ||
       (raw.originalFileName as string) ||
-      'Tài liệu không tên',
+      'Untitled document',
     fileName:
       (raw.originalFileName as string) ||
       (raw.fileName as string) ||
@@ -64,7 +64,7 @@ async function fetchWithAuth(
       message?: string
     }
     throw new Error(
-      payload.error || payload.message || `Lỗi máy chủ (${res.status})`,
+      payload.error || payload.message || `Server error (${res.status})`,
     )
   }
   return res
@@ -112,12 +112,12 @@ export const ocrApi = {
     if (typeof data === 'string') return data
     if (data.text) return data.text as string
     if (data.ocrStatus === 'PENDING' || data.ocrStatus === 'PROCESSING') {
-      return '⏳ Tài liệu đang trong hàng đợi xử lý Tesseract OCR. Vui lòng bấm "Làm mới danh sách" sau vài giây...'
+      return '⏳ The document is queued for Tesseract OCR. Select "Refresh list" in a few seconds…'
     }
     if (data.ocrStatus === 'FAILED') {
-      return `❌ Quét OCR thất bại: ${data.ocrError || 'Không thể đọc tệp tin'}`
+      return `❌ OCR failed: ${data.ocrError || 'Unable to read the file'}`
     }
-    return 'Tài liệu không có văn bản trích xuất.'
+    return 'This document has no extracted text.'
   },
 
   async retryOcr(id: number, signal?: AbortSignal): Promise<void> {

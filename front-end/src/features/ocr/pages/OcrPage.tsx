@@ -40,7 +40,7 @@ export default function OcrPage() {
         setErrorMessage(
           err instanceof Error
             ? err.message
-            : 'Không thể kết nối tới dịch vụ quản lý tài liệu.',
+            : 'Unable to connect to the document service.',
         )
       }
     } finally {
@@ -52,7 +52,7 @@ export default function OcrPage() {
     void loadDocuments()
   }, [loadDocuments])
 
-  // Khi chọn document -> nạp text
+  // When a document is selected, load its text
   useEffect(() => {
     if (selectedDocId === null) return
     const controller = new AbortController()
@@ -66,8 +66,8 @@ export default function OcrPage() {
         if (!controller.signal.aborted) {
           setSelectedDocText(
             err instanceof Error
-              ? `Không thể tải văn bản OCR: ${err.message}`
-              : 'Không thể tải văn bản OCR.',
+              ? `Unable to load the OCR text: ${err.message}`
+              : 'Unable to load the OCR text.',
           )
         }
       })
@@ -91,7 +91,7 @@ export default function OcrPage() {
       await loadDocuments()
     } catch (err) {
       setErrorMessage(
-        err instanceof Error ? err.message : 'Tải tài liệu lên thất bại.',
+        err instanceof Error ? err.message : 'Document upload failed.',
       )
     } finally {
       setUploading(false)
@@ -105,7 +105,7 @@ export default function OcrPage() {
       await loadDocuments()
     } catch (err) {
       setErrorMessage(
-        err instanceof Error ? err.message : 'Không thể chạy lại OCR.',
+        err instanceof Error ? err.message : 'Unable to run OCR again.',
       )
     }
   }
@@ -117,7 +117,7 @@ export default function OcrPage() {
       await loadDocuments()
     } catch (err) {
       setErrorMessage(
-        err instanceof Error ? err.message : 'Không thể nạp Vector AI.',
+        err instanceof Error ? err.message : 'Unable to index the document for AI.',
       )
     }
   }
@@ -137,28 +137,28 @@ export default function OcrPage() {
         return (
           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-            Đã OCR xong
+            OCR complete
           </span>
         )
       case 'PROCESSING':
         return (
           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-amber-500/10 text-amber-400 border border-amber-500/20">
             <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
-            Đang quét OCR...
+            Processing OCR…
           </span>
         )
       case 'PENDING':
         return (
           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-yellow-500/10 text-yellow-400 border border-yellow-500/20">
             <span className="w-1.5 h-1.5 rounded-full bg-yellow-400" />
-            Hàng đợi
+            Queued
           </span>
         )
       case 'FAILED':
         return (
           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-red-500/10 text-red-400 border border-red-500/20">
             <span className="w-1.5 h-1.5 rounded-full bg-red-400" />
-            Lỗi xử lý
+            Processing failed
           </span>
         )
     }
@@ -177,7 +177,7 @@ export default function OcrPage() {
           </div>
           <div>
             <h1 className="text-sm font-semibold text-white tracking-wide">
-              Quản lý Tài liệu &amp; Bóc tách Chữ (OCR Demo)
+              Documents &amp; Text Extraction (OCR Demo)
             </h1>
             <p className="text-[11px] text-[#8e8e8e]">
               MinIO Storage &bull; RabbitMQ Pipeline &bull; Tesseract OCR &bull;
@@ -205,7 +205,7 @@ export default function OcrPage() {
               d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
             />
           </svg>
-          <span>Làm mới danh sách</span>
+          <span>Refresh list</span>
         </button>
       </div>
 
@@ -238,14 +238,14 @@ export default function OcrPage() {
                   d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
                 />
               </svg>
-              Tải tài liệu mới lên MinIO
+              Upload a document
             </h2>
 
             <form onSubmit={handleUpload} className="space-y-3">
               <div>
                 <input
                   type="text"
-                  placeholder="Tiêu đề tài liệu (VD: Quy chế thi đua 2026)"
+                  placeholder="Document title (e.g. Academic Regulations 2026)"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   className="w-full !min-h-[38px] !bg-[#212121] !border-white/10 !rounded-lg !px-3 !py-2 !text-xs text-white placeholder:!text-[#666] focus:outline-none focus:!border-[#55b9ff]"
@@ -272,7 +272,7 @@ export default function OcrPage() {
                 {uploading ? (
                   <>
                     <span className="w-3.5 h-3.5 border-2 border-black border-t-transparent rounded-full animate-spin" />
-                    <span>Đang nạp lên MinIO &amp; Hàng đợi...</span>
+                    <span>Uploading and queuing…</span>
                   </>
                 ) : (
                   <>
@@ -289,7 +289,7 @@ export default function OcrPage() {
                         d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
                       />
                     </svg>
-                    <span>Tải lên &amp; Khởi chạy Tesseract OCR</span>
+                    <span>Upload &amp; Run OCR</span>
                   </>
                 )}
               </button>
@@ -300,10 +300,10 @@ export default function OcrPage() {
           <div className="flex-1 bg-[#181818] border border-white/10 rounded-xl p-4 flex flex-col overflow-hidden min-h-0">
             <div className="flex items-center justify-between mb-3 shrink-0">
               <h2 className="text-xs font-semibold uppercase tracking-wider text-[#b4b4b4]">
-                Tài liệu đã lưu trữ ({documents.length})
+                Stored documents ({documents.length})
               </h2>
               <span className="text-[11px] text-[#666]">
-                Bấm để xem chữ bóc tách
+                View extracted text
               </span>
             </div>
 
@@ -354,7 +354,9 @@ export default function OcrPage() {
                                 : 'bg-white/10 hover:bg-white/20 text-white'
                             }`}
                           >
-                            {doc.isEmbedded ? '✓ Đã nạp AI' : '+ Nạp Vector AI'}
+                            {doc.isEmbedded
+                              ? '✓ Indexed for AI'
+                              : '+ Index for AI'}
                           </button>
                         )}
 
@@ -364,7 +366,7 @@ export default function OcrPage() {
                             onClick={() => handleRetry(doc.id)}
                             className="px-2 py-0.5 rounded text-[10px] bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-colors"
                           >
-                            Thử lại
+                            Try again
                           </button>
                         )}
                       </div>
@@ -383,12 +385,12 @@ export default function OcrPage() {
             <div>
               <div className="flex items-center gap-2">
                 <span className="text-xs font-semibold uppercase tracking-wider text-[#55b9ff]">
-                  Văn bản trích xuất OCR
+                  Extracted text
                 </span>
                 {selectedDoc && getStatusBadge(selectedDoc.ocrStatus)}
               </div>
               <h2 className="text-sm font-medium text-white truncate max-w-md mt-0.5">
-                {selectedDoc?.title || 'Chưa chọn tài liệu'}
+                {selectedDoc?.title || 'No document selected'}
               </h2>
             </div>
 
@@ -412,7 +414,7 @@ export default function OcrPage() {
                     d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
                   />
                 </svg>
-                <span>{copySuccess ? 'Đã sao chép!' : 'Sao chép chữ'}</span>
+                <span>{copySuccess ? 'Copied!' : 'Copy text'}</span>
               </button>
             </div>
           </div>
@@ -422,7 +424,7 @@ export default function OcrPage() {
             {loadingText ? (
               <div className="h-full flex items-center justify-center text-[#666] gap-2">
                 <span className="w-4 h-4 border-2 border-[#55b9ff] border-t-transparent rounded-full animate-spin" />
-                <span>Đang đọc dữ liệu chữ OCR...</span>
+                <span>Loading extracted text…</span>
               </div>
             ) : selectedDocText ? (
               <pre className="whitespace-pre-wrap font-sans text-sm text-[#e0e0e0] leading-relaxed">
@@ -430,17 +432,17 @@ export default function OcrPage() {
               </pre>
             ) : (
               <div className="h-full flex flex-col items-center justify-center text-[#666]">
-                <p>Chưa có dữ liệu trích xuất cho tài liệu này.</p>
+                <p>No extracted text is available for this document.</p>
               </div>
             )}
           </div>
 
           {/* Footer note for Demo */}
           <div className="pt-3 mt-3 border-t border-white/5 flex items-center justify-between text-[11px] text-[#666] shrink-0">
-            <span>Độ phân giải: 300 DPI &bull; Tesseract v5.x</span>
+            <span>Resolution: 300 DPI &bull; Tesseract v5.x</span>
             <span>
-              Sau khi OCR hoàn tất, văn bản sẵn sàng để AI RAG tìm kiếm và trích
-              dẫn
+              Once OCR is complete, the text is ready for AI search and
+              citations
             </span>
           </div>
         </div>

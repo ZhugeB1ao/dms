@@ -137,10 +137,10 @@ export default function ChatProvider({ children }: { children: ReactNode }) {
       )
     } catch (err) {
       if (controller.signal.aborted) return
-      const errMsg = err instanceof Error ? err.message : 'Có lỗi xảy ra'
+      const errMsg = err instanceof Error ? err.message : 'Something went wrong'
       const errorMessages = updatedMessages.map((msg) =>
         msg.id === botMsgId
-          ? { ...msg, content: `Xin lỗi, đã xảy ra lỗi: ${errMsg}` }
+          ? { ...msg, content: `An error occurred: ${errMsg}` }
           : msg,
       )
       setCurrentMessages(errorMessages)

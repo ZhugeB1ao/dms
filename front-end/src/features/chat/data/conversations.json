@@ -2,26 +2,26 @@
   "conversations": [
     {
       "id": "1",
-      "title": "Điều kiện xét tốt nghiệp HSU",
+      "title": "HSU graduation requirements",
       "messages": [
         {
           "id": "msg-1",
           "role": "user",
-          "content": "Cho mình hỏi điều kiện xét tốt nghiệp hệ đại học chính quy là gì?"
+          "content": "What are the undergraduate graduation requirements?"
         },
         {
           "id": "msg-2",
           "role": "assistant",
-          "content": "Theo Quy định Đào tạo Đại học Chính quy theo Hệ thống Tín chỉ, sinh viên cần đáp ứng các điều kiện sau để được xét tốt nghiệp:\n- Tích lũy tối thiểu 125 - 140 tín chỉ theo khung chương trình từng ngành.\n- Điểm trung bình chung tích lũy toàn khóa đạt từ 2.00 (thang điểm 4) trở lên.\n- Đạt chuẩn đầu ra Tiếng Anh và Tin học theo quy định của Nhà trường.",
+          "content": "To graduate, students must complete 125–140 credits, achieve a cumulative GPA of at least 2.00/4.00, and meet the university English and IT proficiency requirements.",
           "sources": [
             {
               "id": "src-seed-1",
               "type": "document",
-              "title": "Quy_dinh_dao_tao_dai_hoc_2024.pdf",
-              "description": "Độ tương đồng: 94.0%",
+              "title": "Undergraduate_Academic_Regulations_2024.pdf",
+              "description": "Similarity: 94.0%",
               "fileType": "PDF",
               "score": 0.94,
-              "text": "Điều 3. Đăng ký học phần và điều kiện tốt nghiệp: 1. Sinh viên phải tích lũy tối thiểu 125 - 140 tín chỉ theo khung chương trình từng ngành. 2. Điểm trung bình chung tích lũy toàn khóa đạt từ 2.00 (thang điểm 4) trở lên. 3. Có chứng chỉ chuẩn đầu ra Tiếng Anh và Tin học theo quy định của Nhà trường."
+              "text": "Article 3. Graduation requirements: complete 125–140 credits, achieve a cumulative GPA of at least 2.00/4.00, and meet English and IT proficiency requirements."
             }
           ]
         }
@@ -32,11 +32,11 @@
     {
       "id": "src-seed-1",
       "type": "document",
-      "title": "Quy_dinh_dao_tao_dai_hoc_2024.pdf",
-      "description": "Độ tương đồng: 94.0%",
+      "title": "Undergraduate_Academic_Regulations_2024.pdf",
+      "description": "Similarity: 94.0%",
       "fileType": "PDF",
       "score": 0.94,
-      "text": "Điều 3. Đăng ký học phần và điều kiện tốt nghiệp: 1. Sinh viên phải tích lũy tối thiểu 125 - 140 tín chỉ theo khung chương trình từng ngành. 2. Điểm trung bình chung tích lũy toàn khóa đạt từ 2.00 (thang điểm 4) trở lên. 3. Có chứng chỉ chuẩn đầu ra Tiếng Anh và Tin học theo quy định của Nhà trường."
+      "text": "Article 3. Graduation requirements: complete 125–140 credits, achieve a cumulative GPA of at least 2.00/4.00, and meet English and IT proficiency requirements."
     }
   ]
 }

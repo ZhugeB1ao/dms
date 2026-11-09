@@ -20,6 +20,7 @@ export const routes: RouteConfig[] = [
   { path: '/tasks', label: 'My tasks', roles: staff },
   { path: '/approvals', label: 'Pending approvals', roles: ['MANAGER'] },
   { path: '/admin/users', label: 'Users', roles: ['ADMIN'] },
+  { path: '/profile', label: 'Personal profile', roles: ['ADMIN', ...staff] },
   { path: '/admin/departments', label: 'Departments', roles: ['ADMIN'] },
   { path: '/admin/organizations', label: 'Organizations', roles: ['ADMIN'] },
   { path: '/admin/categories', label: 'Categories', roles: ['ADMIN'] },

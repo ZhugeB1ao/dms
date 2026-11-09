@@ -42,9 +42,9 @@ export function ChatInput({
       >
         <div className="flex items-center flex-1 gap-2.5 h-full px-2">
           <input
-            aria-label="Nhập câu hỏi"
+            aria-label="Enter your question"
             className="w-full !min-h-0 !bg-transparent !border-0 !text-[15px] text-white placeholder:!text-[#858585] focus:outline-none focus:ring-0 !p-0 font-normal leading-normal text-left disabled:cursor-not-allowed"
-            placeholder={disabled ? 'Đang suy nghĩ...' : 'Cứ hỏi nhé'}
+            placeholder={disabled ? 'Thinking…' : 'Ask anything'}
             type="text"
             value={value}
             disabled={disabled}

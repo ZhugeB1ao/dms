@@ -25,10 +25,10 @@ export default function DepartmentsPage() {
     createItem: departmentApi.create,
     updateItem: departmentApi.update,
     deactivateItem: departmentApi.deactivate,
-    loadErrorMessage: 'Không thể tải danh sách đơn vị.',
-    deactivateErrorMessage: 'Không thể ngưng dùng đơn vị.',
+    loadErrorMessage: 'Unable to load departments.',
+    deactivateErrorMessage: 'Unable to deactivate this department.',
     conflictField: 'code',
-    conflictDefaultMessage: 'Mã đơn vị đã tồn tại.',
+    conflictDefaultMessage: 'This department code already exists.',
     preparePayload: (rawValues, editingItem, items) => {
       const forbidden = getForbiddenParentIds(items, editingItem?.id)
       const parentId = rawValues.parentId ? Number(rawValues.parentId) : null
@@ -36,7 +36,7 @@ export default function DepartmentsPage() {
         return {
           errors: {
             parentId:
-              'Đơn vị cha không hợp lệ (gây vòng lặp hoặc vượt quá 3 cấp).',
+              'Invalid parent department (it would create a loop or exceed 3 levels).',
           },
         }
       }
@@ -133,7 +133,7 @@ export default function DepartmentsPage() {
                       )}
                       <span>{item.name}</span>
                       <span className="text-[11px] font-normal px-2 py-0.5 rounded-full bg-[#242424] text-[#a3a3a3]">
-                        Cấp {item.depth}
+                        Level {item.depth}
                       </span>
                     </div>
                   </td>
@@ -180,7 +180,7 @@ export default function DepartmentsPage() {
       >
         <div>
           <label htmlFor="department-code" className="field-label">
-            Mã đơn vị (Code) *
+            Department code *
           </label>
           <input
             id="department-code"
@@ -200,7 +200,7 @@ export default function DepartmentsPage() {
 
         <div>
           <label htmlFor="department-name" className="field-label">
-            Tên đơn vị (Name) *
+            Department name *
           </label>
           <input
             id="department-name"
@@ -209,7 +209,7 @@ export default function DepartmentsPage() {
             defaultValue={crud.editingItem?.name || ''}
             required
             maxLength={255}
-            placeholder="VD: Ban Giám đốc, Phòng Hành chính..."
+            placeholder="e.g. Board of Directors, Administration Office…"
             aria-invalid={Boolean(crud.modalErrors.name) || undefined}
           />
           {crud.modalErrors.name && (
@@ -219,7 +219,7 @@ export default function DepartmentsPage() {
 
         <div>
           <label htmlFor="department-parent" className="field-label">
-            Đơn vị cha (Parent department)
+            Parent department
           </label>
           <DepartmentSelect
             id="department-parent"
@@ -242,21 +242,21 @@ export default function DepartmentsPage() {
       <ConfirmDeactivateDialog
         confirmModalRef={crud.confirmModalRef}
         confirmTitleId={crud.confirmTitleId}
-        title="Ngưng dùng đơn vị"
+        title="Deactivate department"
         errorMessage={crud.deactivateError}
         submitting={crud.submitting}
         onClose={crud.closeConfirmModal}
         onConfirm={crud.handleConfirmDeactivate}
         description={
           <>
-            Bạn có chắc chắn muốn ngưng dùng đơn vị{' '}
+            Are you sure you want to deactivate the department{' '}
             <strong className="text-white font-mono">
               {crud.deactivatingItem?.name}
             </strong>{' '}
-            (mã:{' '}
+            (code:{' '}
             <code className="text-white">{crud.deactivatingItem?.code}</code>)?
-            Đơn vị sau khi ngưng dùng sẽ không xuất hiện trong các dropdown tạo
-            mới.
+            A deactivated department no longer appears in the dropdowns used to
+            create new records.
           </>
         }
       />

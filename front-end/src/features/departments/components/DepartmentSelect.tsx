@@ -17,7 +17,7 @@ export interface DepartmentSelectProps extends Omit<
 export default function DepartmentSelect({
   items: externalItems,
   excludeIds,
-  placeholder = '— Không có (Đơn vị cấp 1) —',
+  placeholder = '— None (top-level department) —',
   defaultValue,
   value,
   ...rest

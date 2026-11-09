@@ -35,7 +35,7 @@ export function ChatArea({ messages, isLoading = false }: ChatAreaProps) {
 
         {isWaitingFirstToken && (
           <article
-            aria-label="Đang suy nghĩ"
+            aria-label="Thinking"
             className="flex flex-col items-start w-full space-y-2"
           >
             <div className="flex items-center gap-1.5 py-2 px-1">
@@ -43,7 +43,7 @@ export function ChatArea({ messages, isLoading = false }: ChatAreaProps) {
               <span className="w-2 h-2 rounded-full bg-white animate-pulse [animation-delay:200ms]" />
               <span className="w-2 h-2 rounded-full bg-white animate-pulse [animation-delay:400ms]" />
               <span className="text-xs text-[#8e8e8e] ml-2 font-mono">
-                Đang tra cứu tài liệu &amp; suy luận...
+                Searching documents and preparing a response…
               </span>
             </div>
           </article>

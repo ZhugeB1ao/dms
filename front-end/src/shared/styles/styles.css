@@ -1,5 +1,279 @@
 @import 'tailwindcss';
 
+.management-page {
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: clamp(20px, 4vw, 48px);
+}
+.management-page h1 {
+  font-size: clamp(24px, 3vw, 32px);
+  font-weight: 600;
+  line-height: 1.25;
+}
+.management-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 28px;
+}
+.management-heading h1 {
+  margin: 8px 0 12px;
+}
+.management-eyebrow {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  color: var(--color-muted);
+}
+.management-filters {
+  display: grid;
+  grid-template-columns: minmax(180px, 1.5fr) repeat(3, minmax(130px, 1fr)) auto;
+  align-items: end;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+.user-field {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 8px;
+}
+.user-field label {
+  font-size: 14px;
+  font-weight: 600;
+}
+.user-field input,
+.user-field select:not(.select-control) {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  border: 1px solid var(--color-stroke);
+  border-radius: 10px;
+  background: var(--color-sidebar);
+  color: inherit;
+  padding: 10px 12px;
+  font-size: 16px;
+}
+.user-field input[aria-invalid='true'],
+.user-field select[aria-invalid='true'] {
+  border-color: #f5a0a0;
+}
+.user-field :disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+.management-page :focus-visible,
+.user-dialog :focus-visible {
+  outline: 2px solid #e5e5e5;
+  outline-offset: 3px;
+}
+.management-notice {
+  margin: 16px 0;
+  border: 1px solid var(--color-stroke);
+  border-radius: 12px;
+  padding: 16px;
+  overflow-wrap: anywhere;
+}
+.management-count {
+  margin: 12px 0;
+  color: var(--color-muted);
+  font-size: 14px;
+}
+.management-table-scroll {
+  overflow-x: auto;
+  border: 1px solid var(--color-stroke);
+  border-radius: 14px;
+}
+.management-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  text-align: left;
+}
+.management-table th {
+  color: var(--color-muted);
+  font-weight: 500;
+  background: var(--color-sidebar);
+  white-space: nowrap;
+}
+.management-table th,
+.management-table td {
+  padding: 18px 16px;
+  vertical-align: top;
+}
+.management-table tr + tr td {
+  border-top: 1px solid var(--color-stroke);
+}
+.management-table td {
+  min-width: 120px;
+}
+.management-table td:first-child {
+  min-width: 210px;
+}
+.management-table td:last-child {
+  min-width: 260px;
+}
+.management-table tbody tr:hover {
+  background: var(--color-sidebar);
+}
+.account-email {
+  display: block;
+  margin: 5px 0;
+  color: var(--color-muted);
+  overflow-wrap: anywhere;
+}
+.account-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.account-actions .button {
+  border-radius: 8px;
+  min-height: 44px;
+  padding: 8px 12px;
+  font-size: 13px;
+}
+.account-actions .text-link {
+  display: block;
+  font-size: 13px;
+}
+.management-page button:disabled,
+.user-dialog button:disabled {
+  cursor: not-allowed;
+}
+.account-status {
+  display: inline-block;
+  border: 1px solid var(--color-stroke);
+  border-radius: 999px;
+  padding: 5px 10px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.account-status--active {
+  color: #b7e9c5;
+  background: #13281b;
+}
+.account-status--inactive {
+  color: #ddd;
+  background: #262626;
+}
+.management-pagination {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 20px;
+  font-size: 14px;
+}
+.management-pagination .user-field {
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+}
+.management-pagination select.select-control {
+  width: 80px;
+}
+.management-empty {
+  padding: 48px 16px;
+  text-align: center;
+  color: var(--color-muted);
+}
+.user-dialog {
+  position: fixed;
+  margin: auto;
+  width: min(640px, calc(100vw - 32px));
+  max-height: calc(100dvh - 48px);
+  overflow-y: auto;
+  padding: clamp(20px, 4vw, 32px);
+  border: 1px solid #454545;
+  border-radius: 20px;
+  background: var(--color-sidebar);
+  color: inherit;
+}
+.user-dialog::backdrop {
+  background: rgb(0 0 0 / 75%);
+}
+.user-dialog h2 {
+  margin-bottom: 12px;
+  font-size: 24px;
+  font-weight: 600;
+}
+.user-form {
+  margin-top: 24px;
+}
+.user-form fieldset {
+  border: 0;
+  padding: 0;
+  min-width: 0;
+}
+.user-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+}
+.user-form > fieldset > .user-field + .user-field {
+  margin-top: 20px;
+}
+.user-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 28px;
+}
+.profile-page {
+  max-width: 900px;
+}
+.profile-page h1 {
+  margin-top: 10px;
+}
+.profile-details {
+  margin-top: 32px;
+  border: 1px solid var(--color-stroke);
+  border-radius: 16px;
+  padding: 4px 24px;
+}
+.profile-details > div {
+  display: grid;
+  grid-template-columns: minmax(120px, 1fr) minmax(0, 2fr);
+  gap: 20px;
+  padding: 20px 0;
+}
+.profile-details > div + div {
+  border-top: 1px solid var(--color-stroke);
+}
+.profile-details dt {
+  color: var(--color-muted);
+}
+.profile-details dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 1100px) {
+  .management-filters {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 600px) {
+  .management-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .management-filters,
+  .user-form-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .management-pagination {
+    justify-content: flex-start;
+  }
+  .profile-details > div {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+  }
+}
+
 .account-page {
   width: min(440px, 100%);
   margin: 40px auto;
@@ -90,13 +364,18 @@ a {
   letter-spacing: -0.6px;
 }
 .sidebar {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  position: sticky;
+  top: 0;
   width: 260px;
   flex-shrink: 0;
   background: var(--color-sidebar);
   border-right: 1px solid var(--color-stroke);
 }
 .sidebar--desktop {
-  display: block;
+  display: flex;
   min-width: 0;
   opacity: 1;
   transform: translateX(0);
@@ -112,6 +391,71 @@ a {
 }
 .sidebar--mobile {
   min-height: 100%;
+}
+.sidebar > nav {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.sidebar > div:first-child {
+  flex-shrink: 0;
+}
+.sidebar-profile-area {
+  flex-shrink: 0;
+  padding: 8px 8px max(8px, env(safe-area-inset-bottom));
+  border-top: 1px solid var(--color-stroke);
+}
+.sidebar-profile {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 60px;
+  padding: 10px;
+  border-radius: 14px;
+  color: inherit;
+  text-decoration: none;
+  transition: background-color 150ms ease;
+}
+.sidebar-profile:hover,
+.sidebar-profile.is-active {
+  background: var(--color-panel);
+}
+.sidebar-profile-avatar {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: #344c5b;
+  color: #e1edf4;
+  font-size: 11px;
+  font-weight: 600;
+}
+.sidebar-profile-copy {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 2px;
+}
+.sidebar-profile-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 500;
+}
+.sidebar-profile-role {
+  color: var(--color-muted);
+  font-size: 12px;
+  line-height: 18px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .sidebar-profile {
+    transition: none;
+  }
 }
 .mobile-toggle {
   display: none !important;
@@ -381,26 +725,4 @@ select[aria-invalid='true'] {
 .button--danger-icon:hover {
   background: #3a1c1c !important;
   color: #ff6b6b !important;
-}
-
-select {
-  appearance: none;
-  -webkit-appearance: none;
-  -moz-appearance: none;
-
-  /* Icon mũi tên SVG sắc nét */
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%238e8e8e' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-
-  /* 👉 CHỈNH KHOẢNG CÁCH VỚI LỀ PHẢI TẠI ĐÂY (VD: 14px, 16px, 18px...) */
-  background-position: right 14px center;
-
-  /* Chừa lề phải để chữ không bị đè lên icon */
-  padding-right: 36px !important;
-  cursor: pointer;
-}
-
-/* Xóa icon mặc định trên trình duyệt IE/Edge cũ */
-select::-ms-expand {
-  display: none;
 }

@@ -36,7 +36,7 @@ export function useCrudPage<T extends { id: number }>({
   loadErrorMessage,
   deactivateErrorMessage,
   conflictField = 'code',
-  conflictDefaultMessage = 'Dữ liệu đã tồn tại.',
+  conflictDefaultMessage = 'This record already exists.',
   preparePayload,
 }: UseCrudPageOptions<T>) {
   const [items, setItems] = useState<T[]>([])
@@ -139,8 +139,8 @@ export function useCrudPage<T extends { id: number }>({
     >('input, select, textarea')) {
       if (!input.validity.valid) {
         nextErrors[input.name] = input.validity.valueMissing
-          ? 'Trường này không được để trống.'
-          : 'Giá trị không hợp lệ.'
+          ? 'This field is required.'
+          : 'Enter a valid value.'
       }
     }
 
@@ -201,7 +201,7 @@ export function useCrudPage<T extends { id: number }>({
         if (targetEl instanceof HTMLElement) targetEl.focus()
       } else {
         setModalMessage(
-          getApiErrorMessage(err, 'Có lỗi xảy ra. Vui lòng thử lại.'),
+          getApiErrorMessage(err, 'Something went wrong. Please try again.'),
         )
       }
     } finally {

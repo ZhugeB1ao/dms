@@ -22,7 +22,7 @@ export function ChatSidePanel() {
 
   return (
     <aside
-      aria-label="Bảng thông tin hội thoại và tài liệu tham chiếu"
+      aria-label="Conversation and reference panel"
       className="flex h-full w-[340px] shrink-0 flex-col border-l border-white/10 bg-[#0c0c0c] text-[#ECECEC] select-none"
     >
       {/* Header Row: Tab Switcher */}
@@ -37,7 +37,7 @@ export function ChatSidePanel() {
                 : 'text-[#8e8e8e] hover:text-white'
             }`}
           >
-            Lịch sử ({conversations.length})
+            History ({conversations.length})
           </button>
           <button
             type="button"
@@ -49,7 +49,7 @@ export function ChatSidePanel() {
             }`}
           >
             <BookIcon className="w-3.5 h-3.5" />
-            <span>Nguồn ({sources.length})</span>
+            <span>Sources ({sources.length})</span>
           </button>
           <button
             type="button"
@@ -61,13 +61,13 @@ export function ChatSidePanel() {
             }`}
           >
             <EyeIcon className="w-3.5 h-3.5" />
-            <span>Chi tiết</span>
+            <span>Details</span>
           </button>
         </div>
 
         <button
           type="button"
-          aria-label="Đóng bảng bên phải"
+          aria-label="Close side panel"
           onClick={() => setSidePanelTab('hidden')}
           className="rounded-lg p-1.5 text-[#8e8e8e] hover:bg-white/5 hover:text-white"
         >
@@ -121,7 +121,7 @@ export function ChatSidePanel() {
                   <p className="text-[11px] text-[#8e8e8e] mt-0.5 line-clamp-2">
                     {source.text ||
                       source.description ||
-                      'Xem nội dung đối chiếu'}
+                      'View reference content'}
                   </p>
                 </div>
               </div>
@@ -147,7 +147,7 @@ export function ChatSidePanel() {
                     </div>
                     <p className="text-[11px] text-[#8e8e8e] truncate">
                       {selectedSource.description ||
-                        'Tài liệu trường Đại học Hoa Sen'}
+                        'Hoa Sen University documents'}
                     </p>
                   </div>
                 </div>
@@ -156,27 +156,27 @@ export function ChatSidePanel() {
               <div className="p-3.5 bg-black/50 space-y-3 font-sans text-xs leading-relaxed text-[#b4b4b4]">
                 <div className="border-b border-white/5 pb-2">
                   <h5 className="text-[12px] font-semibold text-[#55b9ff] tracking-tight">
-                    Đoạn văn bản trích dẫn đối chiếu
+                    Reference excerpt
                   </h5>
                 </div>
                 <p className="text-[#e2e2e2] bg-white/5 p-2.5 rounded-lg border border-white/5 leading-relaxed whitespace-pre-wrap">
                   {selectedSource.text ||
                     selectedSource.previewText ||
-                    'Không có nội dung xem trước.'}
+                    'No preview available.'}
                 </p>
               </div>
 
               <div className="p-2.5 bg-[#171717] border-t border-white/5 flex items-center justify-between text-[11px] text-[#8e8e8e]">
                 <span className="flex items-center gap-1.5">
                   <span className="w-1.5 h-1.5 rounded-full bg-[#10A37F]" />
-                  Đã xác thực bởi HSU RAG
+                  Verified by HSU RAG
                 </span>
                 <button
                   type="button"
                   className="text-[#55b9ff] hover:underline flex items-center gap-1 font-medium"
                   onClick={() => setSidePanelTab('sources')}
                 >
-                  <span>Xem nguồn khác</span>
+                  <span>View another source</span>
                   <ExternalLinkIcon className="w-3 h-3" />
                 </button>
               </div>
@@ -188,7 +188,7 @@ export function ChatSidePanel() {
       {/* Bottom bar */}
       <div className="p-3 border-t border-white/5 flex items-center justify-between text-xs text-[#8e8e8e] bg-black shrink-0">
         <span className="truncate text-[11px]">
-          {sources.length}&nbsp;tài liệu liên kết chat
+          {sources.length}&nbsp;linked documents
         </span>
       </div>
     </aside>

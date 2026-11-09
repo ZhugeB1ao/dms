@@ -14,7 +14,7 @@ export interface OrganizationSelectProps extends Omit<
 
 export default function OrganizationSelect({
   items: externalItems,
-  placeholder = '— Chọn cơ quan ngoài —',
+  placeholder = '— Select an external organization —',
   defaultValue,
   value,
   ...rest

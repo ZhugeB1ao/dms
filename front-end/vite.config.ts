@@ -13,6 +13,8 @@ export default defineConfig({
     },
   },
   test: {
+    // Avoid oversubscribing the host with concurrent jsdom environments.
+    maxWorkers: 2,
     environment: 'jsdom',
     environmentOptions: { jsdom: { url: 'http://localhost/' } },
     setupFiles: ['./src/test/setup.ts'],

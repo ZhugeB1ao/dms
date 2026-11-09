@@ -7,11 +7,13 @@ export type AuthStatus =
 export interface AuthContextValue {
   status: AuthStatus
   user: User | null
+  sessionNotice: 'expired' | 'passwordChanged' | null
   login: (
     values: Record<string, unknown>,
     signal?: AbortSignal,
   ) => Promise<void>
-  logout: () => Promise<void>
+  logout: (notice?: 'passwordChanged') => Promise<void>
+  reloadUser: (signal?: AbortSignal) => Promise<void>
   retryBootstrap: () => Promise<void>
 }
 

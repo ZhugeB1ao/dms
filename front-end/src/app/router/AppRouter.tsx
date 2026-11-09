@@ -1,6 +1,8 @@
 import { Navigate, Outlet, Route, Routes, useLocation } from 'react-router'
 import { useAuth } from '../../features/auth/context/useAuth.ts'
 import AccountPage from '../../features/auth/pages/AccountPage.tsx'
+import UsersPage from '../../features/users/pages/UsersPage.tsx'
+import ProfilePage from '../../features/users/pages/ProfilePage.tsx'
 import CategoriesPage from '../../features/categories/pages/CategoriesPage.tsx'
 import DepartmentsPage from '../../features/departments/pages/DepartmentsPage.tsx'
 import OrganizationsPage from '../../features/organizations/pages/OrganizationsPage.tsx'
@@ -36,7 +38,10 @@ function Guard({ roles }: { roles: Role[] }) {
       <Navigate
         replace
         to="/login"
-        state={{ from: location.pathname + location.search + location.hash }}
+        state={{
+          from: location.pathname + location.search + location.hash,
+          notice: auth.sessionNotice,
+        }}
       />
     )
   if (!canAccess(auth.user, roles)) return <Navigate replace to="/403" />
@@ -47,7 +52,7 @@ export default function AppRouter() {
   return (
     <Routes>
       <Route element={<AppLayout />}>
-        <Route index element={null} />
+        <Route index element={<Navigate replace to="/dashboard" />} />
         <Route
           path="login"
           element={<AccountPage key="login" mode="login" />}
@@ -67,6 +72,10 @@ export default function AppRouter() {
                   <DepartmentsPage />
                 ) : route.path === '/admin/organizations' ? (
                   <OrganizationsPage />
+                ) : route.path === '/admin/users' ? (
+                  <UsersPage />
+                ) : route.path === '/profile' ? (
+                  <ProfilePage />
                 ) : route.path === '/admin/categories' ? (
                   <CategoriesPage />
                 ) : route.path === '/ocr' ? (

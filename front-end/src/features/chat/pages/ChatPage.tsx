@@ -22,7 +22,7 @@ function ChatWorkspace() {
       aria-label="AI Assistant"
       className="flex h-[calc(100dvh-72px)] w-full overflow-hidden border-t border-[#292929] bg-black"
     >
-      {/* Cột chính: Sub-header + Khung Chat */}
+      {/* Main column: sub-header + chat area */}
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
         <div className="flex h-12 shrink-0 items-center justify-between border-b border-white/10 px-4">
           <button
@@ -30,7 +30,7 @@ function ChatWorkspace() {
             onClick={startNewChat}
             className="inline-flex items-center gap-2 rounded-lg bg-[#212121] px-3 py-1.5 text-xs font-medium text-white hover:bg-[#2c2c2c]"
           >
-            <span>+ Đoạn chat mới</span>
+            <span>+ New chat</span>
           </button>
 
           <div className="flex items-center gap-2">
@@ -44,7 +44,7 @@ function ChatWorkspace() {
                   : 'bg-[#212121] text-[#bdbdbd] hover:text-white'
               }`}
             >
-              Lịch sử ({conversations.length})
+              History ({conversations.length})
             </button>
             <button
               type="button"
@@ -58,7 +58,7 @@ function ChatWorkspace() {
                   : 'bg-[#212121] text-[#bdbdbd] hover:text-white'
               }`}
             >
-              Nguồn trích ({sources.length})
+              Sources ({sources.length})
             </button>
           </div>
         </div>
@@ -79,7 +79,7 @@ function ChatWorkspace() {
         )}
       </div>
 
-      {/* Cột phụ bên phải: Đóng/mở theo ngữ cảnh (Lịch sử / Nguồn trích / Chi tiết) */}
+      {/* Right column: opens and closes by context (History / Sources / Details) */}
       {sidePanelTab !== 'hidden' && <ChatSidePanel />}
     </section>
   )

@@ -31,7 +31,7 @@ export function AssistantMessage({ message }: AssistantMessageProps) {
 
   return (
     <article
-      aria-label="Phản hồi của Trợ lý AI"
+      aria-label="AI assistant response"
       className="flex flex-col items-start w-full space-y-2 select-text"
     >
       <div className="text-[#e2e2e2] text-[15px] leading-relaxed whitespace-pre-wrap">
@@ -40,7 +40,7 @@ export function AssistantMessage({ message }: AssistantMessageProps) {
           <button
             type="button"
             className="inline-flex items-center gap-1 ml-2 px-2 py-0.5 rounded-full bg-[#2a2a2a] hover:bg-[#333333] border border-white/10 hover:border-white/30 text-xs text-[#e2e2e2] align-middle select-none transition-all cursor-pointer"
-            title={`Click để xem đoạn trích dẫn từ: ${topSource.title}${topSource.score ? ` (Độ khớp: ${(topSource.score * 100).toFixed(0)}%)` : ''}`}
+            title={`View the cited excerpt from: ${topSource.title}${topSource.score ? ` (Match: ${(topSource.score * 100).toFixed(0)}%)` : ''}`}
             onClick={() => openSourceDetail(0, message.sources)}
           >
             <span className="font-normal truncate max-w-[160px]">

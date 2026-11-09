@@ -23,12 +23,12 @@ export interface CategoryFilterParams {
 }
 
 export const CATEGORY_TYPES: Record<CategoryTypeCode, string> = {
-  DOC_TYPE: 'Loại văn bản',
-  URGENCY: 'Độ khẩn',
-  CONFIDENTIALITY: 'Độ mật',
-  POSITION: 'Chức vụ',
-  SEND_METHOD: 'Phương thức gửi',
-  FIELD: 'Lĩnh vực',
+  DOC_TYPE: 'Document type',
+  URGENCY: 'Urgency',
+  CONFIDENTIALITY: 'Confidentiality',
+  POSITION: 'Position',
+  SEND_METHOD: 'Delivery method',
+  FIELD: 'Field',
 }
 
 export const categoryApi = {
