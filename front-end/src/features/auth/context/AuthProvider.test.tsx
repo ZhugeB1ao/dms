@@ -54,15 +54,17 @@ async function start() {
 it('reloads user details after editing the authenticated account', async () => {
   await start()
   server.use(
-    http.get('http://localhost/api/accounts/me', () =>
-      HttpResponse.json({
-        id: 1,
-        username: 'admin',
-        displayName: 'Updated admin',
-        email: 'admin@demo.test',
-        role: 'ADMIN',
-        departmentId: null,
-      }),
+    http.get(
+      'http://localhost/api/accounts/me',
+      () =>
+        HttpResponse.json({
+          id: 1,
+          username: 'admin',
+          displayName: 'Updated admin',
+          email: 'admin@demo.test',
+          role: 'ADMIN',
+          departmentId: null,
+        }),
       { once: true },
     ),
   )
@@ -76,16 +78,20 @@ it('does not restore a stale user response after logout', async () => {
     started = resolve
   })
   server.use(
-    http.get('http://localhost/api/accounts/me', async () => {
-      started()
-      await delay(100)
-      return HttpResponse.json({
-        id: 1,
-        username: 'admin',
-        displayName: 'Stale admin',
-        role: 'ADMIN',
-      })
-    }, { once: true }),
+    http.get(
+      'http://localhost/api/accounts/me',
+      async () => {
+        started()
+        await delay(100)
+        return HttpResponse.json({
+          id: 1,
+          username: 'admin',
+          displayName: 'Stale admin',
+          role: 'ADMIN',
+        })
+      },
+      { once: true },
+    ),
   )
   await userEvent.click(screen.getByRole('button', { name: 'Reload user' }))
   await pending
@@ -102,18 +108,22 @@ it('does not replace a new account with a delayed reload of the previous account
     started = resolve
   })
   server.use(
-    http.get('http://localhost/api/accounts/me', async () => {
-      started()
-      await delay(400)
-      return HttpResponse.json({
-        id: 1,
-        username: 'admin',
-        email: 'admin@demo.test',
-        displayName: 'Stale admin',
-        role: 'ADMIN',
-        departmentId: null,
-      })
-    }, { once: true }),
+    http.get(
+      'http://localhost/api/accounts/me',
+      async () => {
+        started()
+        await delay(400)
+        return HttpResponse.json({
+          id: 1,
+          username: 'admin',
+          email: 'admin@demo.test',
+          displayName: 'Stale admin',
+          role: 'ADMIN',
+          departmentId: null,
+        })
+      },
+      { once: true },
+    ),
   )
   await userEvent.click(screen.getByRole('button', { name: 'Reload user' }))
   await pending

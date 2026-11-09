@@ -117,7 +117,9 @@ export default function OcrPage() {
       await loadDocuments()
     } catch (err) {
       setErrorMessage(
-        err instanceof Error ? err.message : 'Unable to index the document for AI.',
+        err instanceof Error
+          ? err.message
+          : 'Unable to index the document for AI.',
       )
     }
   }

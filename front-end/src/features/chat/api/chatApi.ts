@@ -96,7 +96,9 @@ export const chatApi = {
           if (!payload) continue
 
           if (payload.event === 'error') {
-            throw new Error(payload.detail || 'The AI service returned an error.')
+            throw new Error(
+              payload.detail || 'The AI service returned an error.',
+            )
           }
           if (payload.event === 'sources' && onSources) {
             const mappedSources: SourceCitation[] = (payload.sources || []).map(
