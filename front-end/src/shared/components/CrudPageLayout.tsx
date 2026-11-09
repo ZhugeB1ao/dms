@@ -1,3 +1,4 @@
+import Select from './Select.tsx'
 import type { FormEvent, ReactNode, RefObject } from 'react'
 import Button from './Button.tsx'
 import { CloseIcon, DeactivateIcon, EditIcon, SearchIcon } from './Icons.tsx'
@@ -63,7 +64,7 @@ export function CrudToolbar({
 
         {extraFilters}
 
-        <select
+        <Select
           value={statusFilter}
           onChange={(e) => onStatusFilterChange(e.target.value)}
           aria-label="Filter by status"
@@ -71,7 +72,7 @@ export function CrudToolbar({
         >
           <option value="all">All statuses</option>
           <option value="active">Active only</option>
-        </select>
+        </Select>
 
         <span className="text-sm text-[#8e8e8e] ml-2">
           {resultCount} {resultCount === 1 ? 'result' : 'results'}

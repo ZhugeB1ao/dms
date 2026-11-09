@@ -1,3 +1,4 @@
+import Select from '../../../shared/components/Select.tsx'
 import { useEffect, useState, type SelectHTMLAttributes } from 'react'
 import {
   buildDepartmentRows,
@@ -42,7 +43,7 @@ export default function DepartmentSelect({
   )
 
   return (
-    <select defaultValue={defaultValue} value={value} {...rest}>
+    <Select defaultValue={defaultValue} value={value} {...rest}>
       <option value="">{placeholder}</option>
       {rows.map((row) => {
         const prefix = row.depth > 1 ? `${'— '.repeat(row.depth - 1)}` : ''
@@ -53,6 +54,6 @@ export default function DepartmentSelect({
           </option>
         )
       })}
-    </select>
+    </Select>
   )
 }

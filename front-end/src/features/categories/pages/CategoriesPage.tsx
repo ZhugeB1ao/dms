@@ -1,3 +1,4 @@
+import Select from '../../../shared/components/Select.tsx'
 import { useCallback, useState } from 'react'
 import {
   ConfirmDeactivateDialog,
@@ -62,7 +63,7 @@ export default function CategoriesPage() {
         resultCount={filtered.length}
         error={crud.error}
         extraFilters={
-          <select
+          <Select
             value={typeFilter}
             onChange={(e) => setTypeFilter(e.target.value)}
             aria-label="Filter by type"
@@ -74,7 +75,7 @@ export default function CategoriesPage() {
                 {label} ({code})
               </option>
             ))}
-          </select>
+          </Select>
         }
       />
 
@@ -162,7 +163,7 @@ export default function CategoriesPage() {
           <label htmlFor="category-type" className="field-label">
             Category type *
           </label>
-          <select
+          <Select
             id="category-type"
             name="type"
             defaultValue={crud.editingItem?.type || 'DOC_TYPE'}
@@ -174,7 +175,7 @@ export default function CategoriesPage() {
                 {label} ({code})
               </option>
             ))}
-          </select>
+          </Select>
           {crud.modalErrors.type && (
             <div className="field-error">{crud.modalErrors.type}</div>
           )}
