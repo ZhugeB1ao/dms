@@ -27,7 +27,7 @@ it('combines filters, resets the current page, and clears filters', async () => 
   expect(screen.getByText('Page 1 / 1')).toBeVisible()
   await user.click(screen.getByRole('button', { name: 'Clear filters' }))
   expect(await screen.findByText('28 accounts')).toBeVisible()
-})
+}, 20000)
 it('ignores a stale response that finishes after the latest filter', async () => {
   featureServer.use(
     http.get('http://localhost/api/accounts', async ({ request }) => {

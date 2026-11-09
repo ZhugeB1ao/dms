@@ -76,8 +76,16 @@ export default function AccountPage({ mode }: { mode: AccountPageMode }) {
     } catch (error) {
       if (controller.signal.aborted) return
       const data = axios.isAxiosError(error) ? error.response?.data : undefined
+      const status = axios.isAxiosError(error)
+        ? error.response?.status
+        : undefined
       setErrors(data?.fieldErrors || {})
-      setMessage(data?.message || 'Unable to connect. Please try again.')
+      setMessage(
+        // auth-service answers a deactivated account with "Account has been unactivated!"
+        mode === 'login' && status === 403
+          ? 'This account has been deactivated. Please contact an administrator.'
+          : data?.message || 'Unable to connect. Please try again.',
+      )
     } finally {
       busy.current = false
       if (!controller.signal.aborted) setPending(false)

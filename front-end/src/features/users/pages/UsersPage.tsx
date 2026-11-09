@@ -109,7 +109,9 @@ export default function UsersPage() {
             value={query.departmentId ?? ''}
             onChange={(e) =>
               filter({
-                departmentId: e.target.value ? Number(e.target.value) : undefined,
+                departmentId: e.target.value
+                  ? Number(e.target.value)
+                  : undefined,
               })
             }
           >

@@ -26,7 +26,9 @@ export default function UserFormDialog({
   const auth = useAuth()
   const self = auth.user?.id === String(account?.id)
   const [role, setRole] = useState<Role>(account?.role ?? 'EMPLOYEE')
-  const [department, setDepartment] = useState(String(account?.departmentId ?? ''))
+  const [department, setDepartment] = useState(
+    String(account?.departmentId ?? ''),
+  )
   const [departments, setDepartments] = useState<DepartmentItem[] | null>(null)
   const [optionError, setOptionError] = useState('')
   const [attempt, setAttempt] = useState(0)

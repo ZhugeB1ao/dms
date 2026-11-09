@@ -51,9 +51,6 @@ export default function Header({
       <div className="ml-auto flex items-center gap-2">
         {user ? (
           <>
-            <span className="text-sm text-muted hidden sm:inline">
-              {user.displayName}
-            </span>
             <Button variant="secondary" onClick={onLogout}>
               Log out
             </Button>

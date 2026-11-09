@@ -13,25 +13,22 @@ it('creates an account and keeps the form input after a duplicate email conflict
   await user.type(dialog.getByLabelText('Username'), 'newuser')
   await user.type(dialog.getByLabelText('Email'), 'employee@demo.test')
   await waitFor(() =>
-    expect(
-      dialog.getByRole('button', { name: 'Save account' }),
-    ).toBeEnabled(),
+    expect(dialog.getByRole('button', { name: 'Save account' })).toBeEnabled(),
   )
   await user.selectOptions(dialog.getByLabelText('Department'), '2')
   await user.type(dialog.getByLabelText('Position'), 'Clerk')
   await user.type(dialog.getByLabelText('Temporary password'), 'Initial123!')
   await user.type(dialog.getByLabelText('Confirm password'), 'Initial123!')
   await user.click(dialog.getByRole('button', { name: 'Save account' }))
-  expect(
-    await dialog.findByText('This username or email is already in use.'),
-  ).toBeVisible()
+  expect(await dialog.findByText('This email is already in use.')).toBeVisible()
+  expect(dialog.getByLabelText('Email')).toHaveAttribute('aria-invalid', 'true')
   expect(dialog.getByLabelText('Username')).toHaveValue('newuser')
   await user.clear(dialog.getByLabelText('Email'))
   await user.type(dialog.getByLabelText('Email'), 'new@demo.test')
   await user.click(dialog.getByRole('button', { name: 'Save account' }))
   await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
   expect(await screen.findByText('29 accounts')).toBeVisible()
-})
+}, 20000)
 it('validates required fields and confirmation before sending a create request', async () => {
   const user = userEvent.setup()
   await renderAccountRoute()

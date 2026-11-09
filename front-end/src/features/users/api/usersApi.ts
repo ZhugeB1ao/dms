@@ -13,7 +13,9 @@ export const usersApi = {
       .get<AccountPageResult>('/accounts', { params, signal })
       .then((r) => r.data),
   create: (input: CreateAccountInput, signal?: AbortSignal) =>
-    api.post<ManagedAccount>('/accounts', input, { signal }).then((r) => r.data),
+    api
+      .post<ManagedAccount>('/accounts', input, { signal })
+      .then((r) => r.data),
   update: (id: number, input: AccountWrite, signal?: AbortSignal) =>
     api
       .put<ManagedAccount>(`/accounts/${id}`, input, { signal })

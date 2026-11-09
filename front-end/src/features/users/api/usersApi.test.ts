@@ -26,10 +26,13 @@ it('sends the account-service query, status and password-reset payloads', async 
         totalPages: 0,
       })
     }),
-    http.patch('http://localhost/api/accounts/3/status', async ({ request }) => {
-      status = await request.json()
-      return HttpResponse.json({ id: 3 })
-    }),
+    http.patch(
+      'http://localhost/api/accounts/3/status',
+      async ({ request }) => {
+        status = await request.json()
+        return HttpResponse.json({ id: 3 })
+      },
+    ),
     http.post(
       'http://localhost/api/accounts/3/reset-password',
       async ({ request }) => {

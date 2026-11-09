@@ -341,7 +341,8 @@ function validateAccount(body: Record<string, unknown>, create: boolean) {
   if (create) {
     const username = text(body.username)
     if (!username.trim() || username.length > 50 || /\s/.test(username))
-      errors.username = 'Enter a username of up to 50 characters, without spaces.'
+      errors.username =
+        'Enter a username of up to 50 characters, without spaces.'
     const tempPassword = text(body.tempPassword)
     if (tempPassword.length < 8 || tempPassword.length > 72)
       errors.tempPassword = 'Password must contain 8–72 characters.'
@@ -732,14 +733,11 @@ export const coreHandlers = [
     if (Object.keys(errors).length) return invalid(errors)
     const username = String(body.username)
     const email = String(body.email).trim()
-    if (
-      accounts.some(
-        (a) =>
-          a.username === username ||
-          a.email.toLowerCase() === email.toLowerCase(),
-      )
-    )
-      return fail(409, 'CONFLICT', 'This username or email is already in use.')
+    // Same messages as account-service, which sends no fieldErrors for 409
+    if (accounts.some((a) => a.username === username))
+      return fail(409, 'CONFLICT', 'Username already exists')
+    if (accounts.some((a) => a.email.toLowerCase() === email.toLowerCase()))
+      return fail(409, 'CONFLICT', 'Email already exists')
     const created: MockAccount = {
       id: Math.max(...accounts.map((a) => a.id)) + 1,
       username,
@@ -769,7 +767,7 @@ export const coreHandlers = [
           a.id !== target.id && a.email.toLowerCase() === email.toLowerCase(),
       )
     )
-      return fail(409, 'CONFLICT', 'This email is already in use.')
+      return fail(409, 'CONFLICT', 'Email already exists')
     target.email = email
     target.departmentId = body.departmentId as number
     target.position = String(body.position ?? '').trim() || null
@@ -803,7 +801,9 @@ export const coreHandlers = [
         tempPassword.length < 8 ||
         tempPassword.length > 72
       )
-        return invalid({ tempPassword: 'Password must contain 8–72 characters.' })
+        return invalid({
+          tempPassword: 'Password must contain 8–72 characters.',
+        })
       passwords[target.id] = tempPassword
       target.mustChangePassword = true
       endSession(target.id)
