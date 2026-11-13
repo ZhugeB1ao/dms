@@ -1,0 +1,159 @@
+# ==============================================================================
+# DMS - STAGING CHE DO CD: KEO IMAGE TU GHCR (khong build tren may)
+#
+# Image do GitHub Actions (ci.yml cua DO-2) build va day len GHCR moi khi merge vao main.
+# Script staging-update.sh (cung thu muc) se chay dinh ky:
+#   docker compose -f docker-compose.yml --env-file .env.staging pull
+#   docker compose -f docker-compose.yml --env-file .env.staging up -d
+#
+# - Cung "name: dms-staging" voi file build tai cho => dung lai volume, KHONG mat du lieu.
+# - IMAGE_TAG mac dinh "latest"; muon quay lai ban cu thi dat IMAGE_TAG=sha-xxxxxxx trong .env.staging.
+# - CI hien chi build linux/amd64; Mac chip Apple chay qua Rosetta (bat trong Docker Desktop).
+# ==============================================================================
+
+name: dms-staging
+
+x-app: &app
+  restart: unless-stopped
+  platform: linux/amd64
+
+x-java-service: &java-service
+  <<: *app
+  mem_limit: 768m
+  depends_on:
+    postgres:
+      condition: service_healthy
+
+x-java-env: &java-env
+  JAVA_TOOL_OPTIONS: "-Xmx256m -Xms64m -XX:+UseG1GC"
+  SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:?Thieu POSTGRES_USER trong .env.staging}
+  SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:?Thieu POSTGRES_PASSWORD trong .env.staging}
+  SPRING_JPA_SHOW_SQL: "false"
+  APP_SECURITY_GATEWAY_SECRET: ${GATEWAY_SHARED_SECRET:?Thieu GATEWAY_SHARED_SECRET trong .env.staging}
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?Thieu POSTGRES_USER trong .env.staging}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Thieu POSTGRES_PASSWORD trong .env.staging}
+      POSTGRES_DB: postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./staging-init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d organization_db"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  auth-service:
+    <<: *java-service
+    image: ${IMAGE_REGISTRY:-ghcr.io/zhugeb1ao}/dms-auth-service:${IMAGE_TAG:-latest}
+    environment:
+      <<: *java-env
+      SERVER_PORT: 8081
+      GRPC_SERVER_PORT: 9091
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/auth_db
+      APPLICATION_JWT_SECRET_KEY: ${JWT_SECRET_KEY:?Thieu JWT_SECRET_KEY trong .env.staging}
+      ACCOUNT_GRPC_HOST: account-service
+      ACCOUNT_GRPC_PORT: 9092
+
+  account-service:
+    <<: *java-service
+    image: ${IMAGE_REGISTRY:-ghcr.io/zhugeb1ao}/dms-account-service:${IMAGE_TAG:-latest}
+    environment:
+      <<: *java-env
+      SERVER_PORT: 8084
+      GRPC_SERVER_PORT: 9092
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/account_db
+      AUTH_GRPC_HOST: auth-service
+      AUTH_GRPC_PORT: 9091
+      APP_SEED_ENABLED: "true"
+
+  category-service:
+    <<: *java-service
+    image: ${IMAGE_REGISTRY:-ghcr.io/zhugeb1ao}/dms-category-service:${IMAGE_TAG:-latest}
+    environment:
+      <<: *java-env
+      SERVER_PORT: 8080
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/category_db
+      APP_SECURITY_MOCK_ENABLED: "false"
+
+  department-service:
+    <<: *java-service
+    image: ${IMAGE_REGISTRY:-ghcr.io/zhugeb1ao}/dms-department-service:${IMAGE_TAG:-latest}
+    environment:
+      <<: *java-env
+      SERVER_PORT: 8082
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/department_db
+      APP_SECURITY_MOCK_ENABLED: "false"
+      APP_ACCOUNT_GRPC_ENABLED: "true"
+      APP_ACCOUNT_GRPC_HOST: account-service
+      APP_ACCOUNT_GRPC_PORT: 9092
+
+  organization-service:
+    <<: *java-service
+    image: ${IMAGE_REGISTRY:-ghcr.io/zhugeb1ao}/dms-organization-service:${IMAGE_TAG:-latest}
+    environment:
+      <<: *java-env
+      SERVER_PORT: 8083
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/organization_db
+      APP_SECURITY_MOCK_ENABLED: "false"
+
+  api-gateway:
+    <<: *app
+    image: ${IMAGE_REGISTRY:-ghcr.io/zhugeb1ao}/dms-api-gateway:${IMAGE_TAG:-latest}
+    mem_limit: 768m
+    depends_on:
+      - auth-service
+      - account-service
+      - category-service
+      - department-service
+      - organization-service
+    environment:
+      SERVER_PORT: 9090
+      JAVA_OPTS: "-Xmx256m -Xms64m -XX:+UseG1GC"
+      AUTH_SERVICE_URL: http://auth-service:8081
+      ACCOUNT_SERVICE_URL: http://account-service:8084
+      CATEGORY_SERVICE_URL: http://category-service:8080
+      DEPARTMENT_SERVICE_URL: http://department-service:8082
+      ORGANIZATION_SERVICE_URL: http://organization-service:8083
+      AUTH_GRPC_HOST: auth-service
+      AUTH_GRPC_PORT: 9091
+      GATEWAY_SHARED_SECRET: ${GATEWAY_SHARED_SECRET:?Thieu GATEWAY_SHARED_SECRET trong .env.staging}
+      GATEWAY_CORS_ORIGINS: ${STAGING_ORIGIN:?Thieu STAGING_ORIGIN trong .env.staging}
+
+  minio:
+    image: cgr.dev/chainguard/minio:latest
+    restart: unless-stopped
+    command: ["server", "/data", "--console-address", ":9001"]
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:?Thieu MINIO_ROOT_USER trong .env.staging}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?Thieu MINIO_ROOT_PASSWORD trong .env.staging}
+    volumes:
+      - minio_data:/data
+
+  minio-init:
+    image: cgr.dev/chainguard/minio-client:latest
+    restart: on-failure
+    depends_on:
+      - minio
+    environment:
+      MC_HOST_local: http://${MINIO_ROOT_USER}:${MINIO_ROOT_PASSWORD}@minio:9000
+    command: ["mb", "--ignore-existing", "local/${MINIO_BUCKET:-attachments}"]
+
+  front-end:
+    <<: *app
+    image: ${IMAGE_REGISTRY:-ghcr.io/zhugeb1ao}/dms-front-end:${IMAGE_TAG:-latest}
+    depends_on:
+      - api-gateway
+    environment:
+      API_UPSTREAM: http://api-gateway:9090
+    ports:
+      - "127.0.0.1:${FRONTEND_PORT:-8888}:80"
+
+volumes:
+  postgres_data:
+  minio_data:
