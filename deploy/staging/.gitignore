@@ -1,0 +1,6 @@
+# Secret that cua staging - KHONG BAO GIO commit
+.env.staging
+
+# Log va file tam cua script tu cap nhat
+logs/
+.update.lock/

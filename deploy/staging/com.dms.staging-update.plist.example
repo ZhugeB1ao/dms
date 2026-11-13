@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Tac vu hen gio cua macOS: chay staging-update.sh moi 120 giay.
+  Cach dung:
+    1. Thay moi "/DUONG/DAN/TOI/deploy/staging" bang duong dan that tren may chay staging.
+    2. cp com.dms.staging-update.plist.example ~/Library/LaunchAgents/com.dms.staging-update.plist
+    3. launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.dms.staging-update.plist
+  Tat:  launchctl bootout gui/$(id -u)/com.dms.staging-update
+-->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.dms.staging-update</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/bash</string>
+        <string>/DUONG/DAN/TOI/deploy/staging/staging-update.sh</string>
+    </array>
+
+    <key>StartInterval</key>
+    <integer>120</integer>
+
+    <key>RunAtLoad</key>
+    <true/>
+
+    <key>StandardOutPath</key>
+    <string>/DUONG/DAN/TOI/deploy/staging/logs/launchd.out.log</string>
+    <key>StandardErrorPath</key>
+    <string>/DUONG/DAN/TOI/deploy/staging/logs/launchd.err.log</string>
+</dict>
+</plist>
