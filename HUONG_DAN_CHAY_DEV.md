@@ -1,6 +1,6 @@
 # Hướng Dẫn Khởi Chạy Môi Trường Phát Triển Cục Bộ (Dev Environment)
 
-Tài liệu này hướng dẫn cách khởi chạy toàn bộ hệ thống (Frontend + 6 Backend Microservices + 5 Databases) bằng **1 lệnh duy nhất** thông qua script `start-dev.sh` đặt tại thư mục `docs/`.
+Tài liệu này hướng dẫn cách khởi chạy toàn bộ hệ thống (Frontend + 6 Backend Microservices; Database trên Neon) bằng **1 lệnh duy nhất** thông qua script `start-dev.sh` đặt tại thư mục `docs/`.
 
 ---
 
@@ -8,7 +8,7 @@ Tài liệu này hướng dẫn cách khởi chạy toàn bộ hệ thống (Fro
 
 Hệ thống được thiết kế theo tiêu chí **nhẹ - mát máy - khởi động nhanh**:
 - **Chạy trên Host (Java 21 / Node.js)**: Không đóng gói ứng dụng vào Docker. Toàn bộ 6 microservice chạy trực tiếp bằng OpenJDK 21 với cờ giới hạn RAM `-Xmx256m -Xms64m`, giúp tiết kiệm tối đa tài nguyên máy.
-- **Chạy trên Docker**: Chỉ chạy duy nhất 5 container PostgreSQL dạng Alpine (`postgres:16-alpine`), chiếm tổng cộng chưa tới **100MB RAM**.
+- **Database trên Neon** (PostgreSQL 16 cloud): không chạy Postgres trên máy, không cần Docker để chạy dev. Thông tin kết nối đặt trong `.env`, xem [HUONG_DAN_DB_CHUNG.md](HUONG_DAN_DB_CHUNG.md).
 - **Tự trị 100% trong `docs/`**: Toàn bộ Frontend và Backend Services đều nằm trong thư mục `docs/`.
 - **Loại trừ**: Tạm thời loại bỏ `file-service` (OCR), `ai-service` (RAG AI), MinIO, RabbitMQ và Qdrant để tránh tiêu tốn CPU/GPU/RAM.
 
@@ -24,12 +24,12 @@ flowchart TD
         ORG["Organization Service\n:8083"]
     end
 
-    subgraph Docker ["Docker (postgres:16-alpine)"]
-        DB_AUTH["auth_db\n:5436"]
-        DB_ACC["account_db\n:5437"]
-        DB_CAT["category_db\n:5433"]
-        DB_DEPT["department_db\n:5434"]
-        DB_ORG["organization_db\n:5435"]
+    subgraph Neon ["Neon (PostgreSQL 16, branch dev)"]
+        DB_AUTH["auth_db"]
+        DB_ACC["account_db"]
+        DB_CAT["category_db"]
+        DB_DEPT["department_db"]
+        DB_ORG["organization_db"]
     end
 
     FE -->|"/api/*"| GW
@@ -48,15 +48,15 @@ flowchart TD
 
 ## 2. Bảng Phân Bổ Cổng & Cơ Sở Dữ Liệu
 
-| Phân hệ | Cổng Service | Cổng Database (Docker) | Tên Database | Username / Password |
-| :--- | :--- | :--- | :--- | :--- |
-| **Frontend** | `http://localhost:5173` | — | — | — |
-| **API Gateway** | `http://localhost:9090` | — | — | — |
-| **Auth Service** | `http://localhost:8081` *(gRPC :9091)* | `localhost:5436` | `auth_db` | `postgres` / `Bao1234567890@` |
-| **Account Service** | `http://localhost:8084` *(gRPC :9092)* | `localhost:5437` | `account_db` | `postgres` / `postgres` |
-| **Category Service** | `http://localhost:8080` | `localhost:5433` | `category_db` | `postgres` / `postgres` |
-| **Department Service** | `http://localhost:8082` | `localhost:5434` | `department_db` | `postgres` / `postgres` |
-| **Organization Service**| `http://localhost:8083` | `localhost:5435` | `organization_db` | `postgres` / `postgres` |
+| Phân hệ | Cổng Service | Database (Neon, host `DB_HOST` trong `.env`) |
+| :--- | :--- | :--- |
+| **Frontend** | `http://localhost:5173` | — |
+| **API Gateway** | `http://localhost:9090` | — |
+| **Auth Service** | `http://localhost:8081` *(gRPC :9091)* | `auth_db` |
+| **Account Service** | `http://localhost:8084` *(gRPC :9092)* | `account_db` |
+| **Category Service** | `http://localhost:8080` | `category_db` |
+| **Department Service** | `http://localhost:8082` | `department_db` |
+| **Organization Service**| `http://localhost:8083` | `organization_db` |
 
 ---
 
@@ -64,7 +64,7 @@ flowchart TD
 
 1. **Java Runtime**: OpenJDK 21 (Temurin, Microsoft, hoặc Oracle JDK 21). Script sẽ tự động nhận diện qua `/usr/libexec/java_home -v 21` trên macOS.
 2. **Node.js & npm**: Node.js v20+ hoặc v22+.
-3. **Docker Desktop**: Cần bật Docker Desktop để khởi chạy 5 cơ sở dữ liệu. *(Nếu chưa bật, script sẽ thử tự mở ứng dụng trên macOS)*.
+3. **File `.env`** với thông tin Neon: `cp .env.example .env` rồi điền `DB_HOST`, `DB_USERNAME`, `DB_PASSWORD` (xin admin). Máy cần có Internet.
 
 ---
 
@@ -82,28 +82,28 @@ cd docs
 ```
 
 **Quy trình script tự động xử lý**:
-1. Kiểm tra môi trường Java 21 và Docker Desktop.
-2. Khởi động 5 container PostgreSQL qua `docker-compose.db.yml` và kiểm tra sẵn sàng (`pg_isready`).
+1. Kiểm tra môi trường Java 21, đọc `.env`.
+2. Kiểm tra kết nối tới Neon (`DB_HOST:5432`).
 3. Khởi động ngầm 6 dịch vụ Java bằng các gói JAR siêu nhẹ (hoặc qua Maven Spring Boot nếu chưa build).
 4. Kiểm tra sức khỏe các cổng mạng (8080, 8081, 8082, 8083, 8084, 9090).
 5. Khởi chạy Frontend Vite (`npm run dev`) ở foreground để bạn theo dõi log và mở trình duyệt tại `http://localhost:5173`.
 
 > [!NOTE]
-> **Cách dừng**: Nhấn `Ctrl+C` tại cửa sổ terminal đang chạy script. Toàn bộ tiến trình Java và Frontend sẽ dừng lại an toàn ngay lập tức. Các container DB vẫn giữ nguyên để lần sau bạn bật lại nhanh hơn.
+> **Cách dừng**: Nhấn `Ctrl+C` tại cửa sổ terminal đang chạy script. Toàn bộ tiến trình Java và Frontend sẽ dừng lại an toàn ngay lập tức. Neon tự tắt compute sau vài phút không dùng.
 
 ---
 
-### 4.2. Dừng toàn bộ hệ thống & Tắt cả Docker Database
-Khi bạn kết thúc buổi làm việc và muốn tắt sạch mọi thứ:
+### 4.2. Dừng toàn bộ hệ thống
+Khi còn tiến trình chạy ngầm (ví dụ terminal bị đóng đột ngột):
 ```bash
 ./start-dev.sh stop
 ```
-Lệnh này sẽ tắt các service Java, tắt Frontend và gọi `docker compose down` để giải phóng hoàn toàn tài nguyên.
+Lệnh này tắt các service Java và Frontend còn sót lại trên các cổng dev.
 
 ---
 
 ### 4.3. Kiểm tra trạng thái hệ thống
-Xem danh sách các database container và các cổng dịch vụ đang lắng nghe:
+Xem kết nối tới Neon và các cổng dịch vụ đang lắng nghe:
 ```bash
 ./start-dev.sh status
 ```
@@ -153,7 +153,10 @@ Khi có file `.jar` trong thư mục `target/`, script sẽ tự động kích h
      ```
      Script sẽ tự động tìm và kill các process tồn đọng trên các cổng 8080, 8081, 8082, 8083, 8084, 9090, 5173.
 2. **Không kết nối được cơ sở dữ liệu**:
-   - Chạy `./start-dev.sh status` để kiểm tra xem Docker daemon có hoạt động không.
-   - Chạy `docker compose -f docker-compose.db.yml logs` để xem chi tiết log của Postgres.
+   - Chạy `./start-dev.sh status` để kiểm tra có kết nối được tới `DB_HOST` không.
+   - `password authentication failed`: sai `DB_USERNAME` / `DB_PASSWORD` trong `.env`.
+   - `database "xxx_db" does not exist`: database chưa được tạo trên branch Neon đó, báo admin.
+   - Flyway treo hoặc lỗi lock: `DB_HOST` đang là endpoint có `-pooler`, đổi sang host không có `-pooler`.
+   - Chi tiết: [HUONG_DAN_DB_CHUNG.md](HUONG_DAN_DB_CHUNG.md).
 3. **Frontend báo lỗi kết nối mạng**:
    - Kiểm tra xem `api-gateway` (port 9090) hoặc các service thành phần đã sẵn sàng chưa bằng lệnh `./start-dev.sh logs gateway`.

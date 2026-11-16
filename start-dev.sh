@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # ==============================================================================
 # HSU Document Management System - Runner Script Môi Trường Dev Cục Bộ
-# Khởi chạy: FE (Vite) + 6 Microservices (Java/Spring Boot) + 5 Databases (Docker)
+# Khởi chạy: FE (Vite) + 6 Microservices (Java/Spring Boot). Database dùng Neon (cloud),
+# cấu hình trong file .env (cp .env.example .env).
 # Loại trừ: OCR (file-service) & AI (ai-service) để tối ưu RAM/CPU.
 # Toàn bộ dịch vụ chạy 100% trong thư mục docs/ độc lập.
 # ==============================================================================
@@ -11,7 +12,7 @@ set -eo pipefail
 DOCS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 LOG_DIR="$DOCS_DIR/.logs"
 PID_FILE="$LOG_DIR/dev.pids"
-COMPOSE_FILE="$DOCS_DIR/docker-compose.db.yml"
+ENV_FILE="$DOCS_DIR/.env"
 
 # Màu hiển thị console
 CYAN='\033[0;36m'
@@ -47,53 +48,51 @@ setup_java() {
 }
 
 # ------------------------------------------------------------------------------
-# 2. Kiểm tra Docker Daemon
+# 2. Đọc cấu hình Database Neon từ .env
 # ------------------------------------------------------------------------------
-check_docker() {
-  if ! docker info >/dev/null 2>&1; then
-    echo -e "${YELLOW}[!] Docker daemon chưa khởi động.${NC}"
-    if [ "$(uname)" = "Darwin" ]; then
-      echo -e "${CYAN}→ Đang mở Docker Desktop trên macOS...${NC}"
-      open -a Docker 2>/dev/null || true
-      echo -n "Đang đợi Docker sẵn sàng"
-      for i in {1..30}; do
-        if docker info >/dev/null 2>&1; then
-          echo -e " ${GREEN}OK${NC}"
-          return 0
-        fi
-        echo -n "."
-        sleep 1
-      done
+load_env() {
+  if [ ! -f "$ENV_FILE" ]; then
+    echo -e "${RED}[LỖI] Chưa có file .env. Chạy: cp .env.example .env rồi điền thông tin Neon.${NC}"
+    echo -e "Chi tiết: HUONG_DAN_DB_CHUNG.md"
+    exit 1
+  fi
+  set -a
+  # shellcheck disable=SC1090
+  . "$ENV_FILE"
+  set +a
+
+  local missing=()
+  for v in DB_HOST DB_USERNAME DB_PASSWORD; do
+    if [ -z "${!v:-}" ]; then
+      missing+=("$v")
     fi
-    echo -e "\n${RED}[LỖI] Không thể kết nối tới Docker API. Vui lòng bật Docker Desktop rồi chạy lại.${NC}"
+  done
+  if [ ${#missing[@]} -gt 0 ]; then
+    echo -e "${RED}[LỖI] Thiếu ${missing[*]} trong .env.${NC}"
     exit 1
   fi
 }
 
-# ------------------------------------------------------------------------------
-# 3. Khởi động Databases qua Docker
-# ------------------------------------------------------------------------------
-start_databases() {
-  echo -e "\n${BOLD}${CYAN}=== [1/3] KHỞI ĐỘNG CÁC DATABASE TRÊN DOCKER ===${NC}"
-  docker compose -f "$COMPOSE_FILE" up -d
+db_url() {
+  echo "jdbc:postgresql://${DB_HOST}/$1?sslmode=require"
+}
 
-  echo -n "Đang kiểm tra kết nối PostgreSQL"
-  local ports=(5433 5434 5435 5436 5437)
-  for port in "${ports[@]}"; do
-    for i in {1..20}; do
-      if nc -z localhost "$port" 2>/dev/null; then
-        break
-      fi
-      echo -n "."
-      sleep 1
-    done
+# ------------------------------------------------------------------------------
+# 3. Kiểm tra kết nối tới Neon
+# ------------------------------------------------------------------------------
+check_database() {
+  echo -e "\n${BOLD}${CYAN}=== [1/3] KIỂM TRA KẾT NỐI DATABASE (NEON) ===${NC}"
+  echo -n "Đang kết nối ${DB_HOST}:5432"
+  for i in {1..10}; do
+    if nc -z -w 3 "$DB_HOST" 5432 2>/dev/null; then
+      echo -e " ${GREEN}OK${NC}"
+      return 0
+    fi
+    echo -n "."
+    sleep 1
   done
-  echo -e " ${GREEN}SẴN SÀNG!${NC}"
-  echo -e "  • category_db:     ${GREEN}localhost:5433${NC}"
-  echo -e "  • department_db:   ${GREEN}localhost:5434${NC}"
-  echo -e "  • organization_db: ${GREEN}localhost:5435${NC}"
-  echo -e "  • auth_db:         ${GREEN}localhost:5436${NC}"
-  echo -e "  • account_db:      ${GREEN}localhost:5437${NC}"
+  echo -e "\n${RED}[LỖI] Không kết nối được ${DB_HOST}:5432. Kiểm tra mạng và DB_HOST trong .env.${NC}"
+  exit 1
 }
 
 # ------------------------------------------------------------------------------
@@ -141,10 +140,10 @@ start_backend() {
     "GRPC_SERVER_PORT=9091" \
     "ACCOUNT_GRPC_HOST=localhost" \
     "ACCOUNT_GRPC_PORT=9092" \
-    "SPRING_DATASOURCE_URL=jdbc:postgresql://localhost:5436/auth_db" \
-    "SPRING_DATASOURCE_USERNAME=postgres" \
-    "SPRING_DATASOURCE_PASSWORD=Bao1234567890@" \
-    "APPLICATION_JWT_SECRET_KEY=404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970"
+    "SPRING_DATASOURCE_URL=$(db_url auth_db)" \
+    "SPRING_DATASOURCE_USERNAME=$DB_USERNAME" \
+    "SPRING_DATASOURCE_PASSWORD=$DB_PASSWORD" \
+    "APPLICATION_JWT_SECRET_KEY=${JWT_SECRET_KEY:-404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970}"
 
   echo -e "  • Đang chạy ${BOLD}account-service${NC} (Port 8084, gRPC 9092)..."
   run_java_service "account" "$DOCS_DIR/account-service" \
@@ -152,27 +151,27 @@ start_backend() {
     "GRPC_SERVER_PORT=9092" \
     "AUTH_GRPC_HOST=localhost" \
     "AUTH_GRPC_PORT=9091" \
-    "SPRING_DATASOURCE_URL=jdbc:postgresql://localhost:5437/account_db" \
-    "SPRING_DATASOURCE_USERNAME=postgres" \
-    "SPRING_DATASOURCE_PASSWORD=postgres" \
+    "SPRING_DATASOURCE_URL=$(db_url account_db)" \
+    "SPRING_DATASOURCE_USERNAME=$DB_USERNAME" \
+    "SPRING_DATASOURCE_PASSWORD=$DB_PASSWORD" \
     "APP_SEED_ENABLED=true" \
     "APP_SECURITY_GATEWAY_SECRET=$gw_secret"
 
   echo -e "  • Đang chạy ${BOLD}category-service${NC} (Port 8080)..."
   run_java_service "category" "$DOCS_DIR/category-service" \
     "SERVER_PORT=8080" \
-    "SPRING_DATASOURCE_URL=jdbc:postgresql://localhost:5433/category_db" \
-    "SPRING_DATASOURCE_USERNAME=postgres" \
-    "SPRING_DATASOURCE_PASSWORD=postgres" \
+    "SPRING_DATASOURCE_URL=$(db_url category_db)" \
+    "SPRING_DATASOURCE_USERNAME=$DB_USERNAME" \
+    "SPRING_DATASOURCE_PASSWORD=$DB_PASSWORD" \
     "APP_SECURITY_MOCK_ENABLED=false" \
     "APP_SECURITY_GATEWAY_SECRET=$gw_secret"
 
   echo -e "  • Đang chạy ${BOLD}department-service${NC} (Port 8082)..."
   run_java_service "department" "$DOCS_DIR/department-service" \
     "SERVER_PORT=8082" \
-    "SPRING_DATASOURCE_URL=jdbc:postgresql://localhost:5434/department_db" \
-    "SPRING_DATASOURCE_USERNAME=postgres" \
-    "SPRING_DATASOURCE_PASSWORD=postgres" \
+    "SPRING_DATASOURCE_URL=$(db_url department_db)" \
+    "SPRING_DATASOURCE_USERNAME=$DB_USERNAME" \
+    "SPRING_DATASOURCE_PASSWORD=$DB_PASSWORD" \
     "APP_SECURITY_MOCK_ENABLED=false" \
     "APP_SECURITY_GATEWAY_SECRET=$gw_secret" \
     "APP_ACCOUNT_GRPC_ENABLED=true" \
@@ -182,9 +181,9 @@ start_backend() {
   echo -e "  • Đang chạy ${BOLD}organization-service${NC} (Port 8083)..."
   run_java_service "organization" "$DOCS_DIR/organization-service" \
     "SERVER_PORT=8083" \
-    "SPRING_DATASOURCE_URL=jdbc:postgresql://localhost:5435/organization_db" \
-    "SPRING_DATASOURCE_USERNAME=postgres" \
-    "SPRING_DATASOURCE_PASSWORD=postgres" \
+    "SPRING_DATASOURCE_URL=$(db_url organization_db)" \
+    "SPRING_DATASOURCE_USERNAME=$DB_USERNAME" \
+    "SPRING_DATASOURCE_PASSWORD=$DB_PASSWORD" \
     "APP_SECURITY_MOCK_ENABLED=false" \
     "APP_SECURITY_GATEWAY_SECRET=$gw_secret"
 
@@ -237,9 +236,7 @@ cleanup() {
     fi
   done
 
-  echo -e "${GREEN}✓ Đã dừng toàn bộ service thành công.${NC}"
-  echo -e "${CYAN}Lưu ý: Các container Database trong Docker vẫn đang chạy ngầm để lần sau bật nhanh.${NC}"
-  echo -e "Muốn tắt hẳn Database Docker, hãy chạy: ${BOLD}./start-dev.sh stop${NC}\n"
+  echo -e "${GREEN}✓ Đã dừng toàn bộ service thành công.${NC}\n"
 }
 
 # ------------------------------------------------------------------------------
@@ -273,15 +270,11 @@ start_frontend() {
 }
 
 # ------------------------------------------------------------------------------
-# Lệnh bổ trợ: Dừng toàn bộ (gồm cả Docker DB)
+# Lệnh bổ trợ: Dừng toàn bộ service (Database trên Neon tự tắt khi không dùng)
 # ------------------------------------------------------------------------------
 cmd_stop() {
-  echo -e "${YELLOW}→ Đang dừng toàn bộ service và database...${NC}"
+  echo -e "${YELLOW}→ Đang dừng toàn bộ service...${NC}"
   cleanup
-  if docker info >/dev/null 2>&1; then
-    docker compose -f "$COMPOSE_FILE" down
-    echo -e "${GREEN}✓ Đã tắt các container Database trong Docker.${NC}"
-  fi
 }
 
 # ------------------------------------------------------------------------------
@@ -289,11 +282,17 @@ cmd_stop() {
 # ------------------------------------------------------------------------------
 cmd_status() {
   echo -e "\n${BOLD}${CYAN}=== TRẠNG THÁI HỆ THỐNG ===${NC}"
-  echo -e "${BOLD}1. Database Containers (Docker):${NC}"
-  if docker info >/dev/null 2>&1; then
-    docker compose -f "$COMPOSE_FILE" ps
+  echo -e "${BOLD}1. Database (Neon):${NC}"
+  if [ -f "$ENV_FILE" ]; then
+    local host
+    host="$(sed -n 's/^DB_HOST=//p' "$ENV_FILE" | tail -n 1)"
+    if [ -n "$host" ] && nc -z -w 3 "$host" 5432 2>/dev/null; then
+      echo -e "  • ${host}: ${GREEN}KẾT NỐI ĐƯỢC${NC}"
+    else
+      echo -e "  • ${host:-<chưa đặt DB_HOST>}: ${RED}KHÔNG KẾT NỐI ĐƯỢC${NC}"
+    fi
   else
-    echo -e "${RED}Docker daemon chưa chạy.${NC}"
+    echo -e "  ${RED}Chưa có file .env${NC}"
   fi
 
   echo -e "\n${BOLD}2. Các cổng dịch vụ đang lắng nghe:${NC}"
@@ -307,11 +306,6 @@ cmd_status() {
     "8080:Category Service"
     "8082:Department Service"
     "8083:Organization Service"
-    "5433:Category DB"
-    "5434:Department DB"
-    "5435:Organization DB"
-    "5436:Auth DB"
-    "5437:Account DB"
   )
   for item in "${ports[@]}"; do
     local p="${item%%:*}"
@@ -358,8 +352,8 @@ cmd_build() {
 case "${1:-start}" in
   start|"")
     setup_java
-    check_docker
-    start_databases
+    load_env
+    check_database
     start_backend
     start_frontend
     ;;

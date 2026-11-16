@@ -1,45 +1,62 @@
-# Kết nối và làm việc với Database
+# Kết nối và làm việc với Database (Neon)
 
-## Database
+Toàn bộ database của DMS nằm trên **[Neon](https://neon.tech)** (PostgreSQL 16 trên cloud). Không còn chạy Postgres trong Docker.
 
 | Việc | Ở đâu |
 |---|---|
-| Tạo database (DB local) | [docker-compose.db.yml](docker-compose.db.yml), mỗi service một container Postgres, tự tạo khi volume trống |
-| Tạo database (DB dùng chung) | [scripts/shared-db/init-dms-databases.sql](scripts/shared-db/init-dms-databases.sql), admin chạy |
+| Tạo database, role | Neon Console (làm một lần, xem [Dựng Neon lần đầu](#dựng-neon-lần-đầu-admin)) |
 | Tạo, sửa bảng | `<service>/src/main/resources/db/migration/` (Flyway) |
-| Kết nối | `.env` (copy từ [.env.example](.env.example)), `docker-compose.yml` |
+| Kết nối (dev) | `.env` (copy từ [.env.example](.env.example)), dùng cho `./start-dev.sh` và `docker compose` |
+| Kết nối (staging) | `deploy/staging/.env.staging` (copy từ [.env.staging.example](deploy/staging/.env.staging.example)) |
 
 - Mỗi service một database, **không query sang database của service khác**. Cần dữ liệu thì gọi API hoặc gRPC.
-- Service không tự tạo database, phải tạo trước.
+- Service không tự tạo database, phải tạo trước trên Neon.
 
-| Service | Database | DB local | DB dùng chung |
-|---|---|---|---|
-| category-service | `category_db` | `localhost:5433` | `100.67.250.1:5432` |
-| department-service | `department_db` | `localhost:5434` | `100.67.250.1:5432` |
-| organization-service | `organization_db` | `localhost:5435` | `100.67.250.1:5432` |
-| auth-service | `auth_db` | `localhost:5436` | `100.67.250.1:5432` |
-| account-service | `account_db` | `localhost:5437` | `100.67.250.1:5432` |
+| Service | Database |
+|---|---|
+| auth-service | `auth_db` |
+| account-service | `account_db` |
+| category-service | `category_db` |
+| department-service | `department_db` |
+| organization-service | `organization_db` |
+
+Cả 5 database nằm trên cùng một **branch** Neon. Dev và staging dùng **hai branch khác nhau** (`dev` và `staging`), mỗi branch có host riêng, nên dữ liệu thử ở dev không ảnh hưởng staging.
+
+## Cấu hình kết nối
+
+```env
+# .env
+DB_HOST=ep-xxxx-xxxx.ap-southeast-1.aws.neon.tech
+DB_USERNAME=<tài khoản>
+DB_PASSWORD=<mật khẩu>
+```
+
+Từ `DB_HOST`, các service tự ghép URL `jdbc:postgresql://<DB_HOST>/<tên>_db?sslmode=require`.
+
+- **Dùng endpoint direct**, host **không** có `-pooler`. Flyway cần advisory lock theo session, mà pooler của Neon (PgBouncer, chế độ transaction) không hỗ trợ.
+- Neon đưa chuỗi kết nối dạng `postgresql://user:pass@host/db`. Chỉ lấy phần **host** điền vào `DB_HOST`. Spring không nhận user/pass nằm trong URL.
+- Neon tự tắt compute sau ~5 phút không có kết nối. Request đầu tiên sau đó chậm hơn ~1 giây, là bình thường. Pool Hikari của mỗi service đã được cấu hình không giữ kết nối rảnh (`minimum-idle=0`), để Neon tắt được và đỡ tốn giờ compute.
+
+Chạy service trực tiếp từ IDE (không qua `./start-dev.sh`): đặt 3 biến môi trường `SPRING_DATASOURCE_URL`, `SPRING_DATASOURCE_USERNAME`, `SPRING_DATASOURCE_PASSWORD` trong Run Configuration.
 
 ### Kết nối và truy vấn
 
 ```bash
-# Postgres local (mỗi database một container)
-docker exec -it dms-category-postgres psql -U postgres -d category_db
-docker exec -it dms-auth-postgres psql -U postgres -d auth_db
+# Cần psql (brew install libpq) — đọc thông tin từ .env
+set -a; . ./.env; set +a
+psql "postgresql://$DB_USERNAME:$DB_PASSWORD@$DB_HOST/category_db?sslmode=require"
 ```
 
-Postgres dùng chung: xem [Dùng Postgres dùng chung (Tailscale)](#dùng-postgres-dùng-chung-tailscale).
+Hoặc dùng **SQL Editor** trong Neon Console (chọn branch, chọn database).
 
-DBeaver / IntelliJ (DB local): `localhost:<port ở bảng trên>`, user `postgres`, mật khẩu theo `docker-compose.db.yml`, database tương ứng.
+DBeaver / IntelliJ: host `DB_HOST`, port `5432`, database tương ứng, user/mật khẩu như `.env`, bật SSL (`sslmode=require`).
 
 ```sql
 \l   \c category_db   \dt   \d categories        -- DB, đổi DB, bảng, cấu trúc bảng
 SELECT * FROM flyway_schema_history;              -- migration đã chạy
 ```
 
-> DB local mỗi container chỉ có một database, muốn xem DB khác thì kết nối vào container khác. Trên DB dùng chung cả 5 database nằm chung một server, dùng `\c` để chuyển.
-
-### Tạo, sửa bảng (Flyway)
+## Tạo, sửa bảng (Flyway)
 
 Áp dụng cho `category-service`, `department-service`, `organization-service`. Tạo file `V<số>__<mô_tả>.sql` trong `db/migration/`, rồi sửa Entity cho khớp. Flyway tự chạy khi service khởi động.
 
@@ -55,80 +72,64 @@ private String description;
 
 - `ddl-auto=validate`: Entity không khớp bảng thì service không chạy.
 - **Không sửa migration đã merge**, tạo file `V` mới (sửa file cũ sẽ gây lỗi `checksum mismatch`).
-- **Không sửa bảng bằng tay** trên DB dùng chung.
+- **Không sửa bảng bằng tay** trên branch `dev` hoặc `staging`.
 - Trùng số `V` với người khác thì đổi số trước khi mở PR.
-- CI không chạy migration (test dùng H2), nên phải chạy service với Postgres thật trước khi mở PR.
+- CI không chạy migration (test dùng H2), nên phải chạy service với Neon trước khi mở PR.
 
-`auth-service` và `account-service` chưa dùng Flyway mà dùng `ddl-auto=update`: Hibernate tự thêm bảng/cột theo Entity khi khởi động, không xóa hay đổi kiểu cột cũ. Thử nghiệm Entity thì chạy với DB local, tránh để lại cột rác trên DB dùng chung.
+`auth-service` và `account-service` chưa dùng Flyway mà dùng `ddl-auto=update`: Hibernate tự thêm bảng/cột theo Entity khi khởi động, không xóa hay đổi kiểu cột cũ. Thử nghiệm Entity thì tạo **branch Neon riêng** (xem dưới), tránh để lại cột rác trên branch `dev` dùng chung.
 
-Host của DB theo nơi chạy:
+### Branch riêng để thử nghiệm
 
-| Chạy ở | Host trong URL |
-|---|---|
-| IDE / `./start-dev.sh` | `localhost:<5433–5437>` |
-| Docker Compose | `<tên>-postgres:5432` (vd. `category-postgres`) |
-| DB dùng chung | `100.67.250.1:5432` |
+Neon tạo branch gần như tức thì, có sẵn bản sao dữ liệu của branch cha. Neon Console → Branches → New branch → chọn branch cha `dev` → lấy host mới, điền vào `DB_HOST` trong `.env` của bạn. Thử xong thì xóa branch và trả `DB_HOST` về host của `dev`.
 
-## Dùng Postgres dùng chung (Tailscale)
+## Dựng Neon lần đầu (admin)
 
-Máy bạn phải đăng nhập tailnet của nhóm. Kiểm tra trước:
+1. Tạo project tại https://console.neon.tech: **Postgres 16**, region **AWS Asia Pacific (Singapore)** (gần Việt Nam nhất).
+2. **Roles** → New role, ví dụ `dms`. Lưu mật khẩu vào password manager.
+3. **Databases** → New database, tạo 5 database ở bảng trên, owner là role `dms`.
+4. **Branches** → New branch từ branch chính, tạo hai branch `dev` và `staging`. Branch con có sẵn role và database của branch cha.
+5. Mỗi branch → **Connect** → tắt *Connection pooling* → lấy host:
+   - host của `dev`: gửi cho thành viên (cùng user/mật khẩu) để điền vào `.env`
+   - host của `staging`: điền vào `deploy/staging/.env.staging` trên máy staging
 
-```bash
-tailscale ping 100.67.250.1
-nc -zv 100.67.250.1 5432
-```
+Bảng không cần tạo tay: Flyway và Hibernate tự tạo khi service khởi động lần đầu, `account-service` tự seed tài khoản mẫu.
 
-`cp .env.example .env`, điền tài khoản được cấp, **mỗi service một dòng URL**:
+**Thêm service mới cần database:** tạo database (ví dụ `document_db`) trên **từng** branch `dev` và `staging`, rồi thêm `SPRING_DATASOURCE_URL: jdbc:postgresql://${DB_HOST}/document_db?sslmode=require` cho service đó trong `docker-compose.yml`, `deploy/staging/docker-compose.yml` và `start-dev.sh`.
 
-```env
-DB_USERNAME=<tài khoản>
-DB_PASSWORD=<mật khẩu>
-AUTH_DB_URL=jdbc:postgresql://100.67.250.1:5432/auth_db
-ACCOUNT_DB_URL=jdbc:postgresql://100.67.250.1:5432/account_db
-CATEGORY_DB_URL=jdbc:postgresql://100.67.250.1:5432/category_db
-DEPARTMENT_DB_URL=jdbc:postgresql://100.67.250.1:5432/department_db
-ORGANIZATION_DB_URL=jdbc:postgresql://100.67.250.1:5432/organization_db
-```
+**Thêm thành viên (mỗi người một role):** Neon đang dùng nhóm `dms_owner` (sở hữu 5 database) và mỗi thành viên một role (`baohuy`, `giabao`, `quocviet`, `kimanh`).
 
-Rồi chạy `docker compose up -d --build` (`./start-dev.sh` không đọc `.env`, luôn dùng DB local). Muốn quay lại DB local thì xóa file `.env`.
+1. Tạo role cho người mới trong Neon Console → Roles, rồi chạy `GRANT dms_owner TO <role>;`.
+2. Thêm tên role vào hai danh sách trong [scripts/neon/fix-ownership.sql](scripts/neon/fix-ownership.sql), rồi chạy script.
 
-DB dùng chung chỉ truy cập được khi máy chủ DB đang bật Docker và Tailscale. Database trên DB dùng chung không tự được tạo, service mới phải tạo database theo các bước dưới.
+Script này làm hai việc. Thứ nhất, chuyển bảng hiện có về `dms_owner`. Thứ hai, đặt `SET role = dms_owner` cho từng thành viên, để bảng do Flyway/Hibernate tạo ra luôn thuộc nhóm chung.
 
-### Tạo database và bảng trên DB dùng chung (dev)
+> Gặp `permission denied for table ...` nghĩa là bảng đang thuộc role của người tạo ra nó, không thuộc nhóm. Chạy [scripts/neon/fix-ownership.sql](scripts/neon/fix-ownership.sql) bằng `neondb_owner` trong SQL Editor (phần 1 chạy ở từng database).
 
-**1. Tạo lại container** (trên máy chủ DB, trong thư mục `postgres-shared`)
+**Nghi lộ mật khẩu:** Neon Console → Roles → Reset password, rồi cập nhật `.env` / `.env.staging` và khởi động lại service.
+
+## Chép dữ liệu cũ sang Neon (nếu cần)
+
+Từ một Postgres cũ (ví dụ container Docker còn chạy) sang Neon, làm cho từng database:
 
 ```bash
-docker compose up -d
-docker compose ps
+# Nguồn: DB Docker cũ. Ví dụ auth_db ở cổng 5436
+pg_dump -Fc -h localhost -p 5436 -U postgres auth_db > auth_db.dump
+
+# Đích: Neon (đọc từ .env)
+set -a; . ./.env; set +a
+pg_restore --no-owner --no-acl --clean --if-exists \
+  -d "postgresql://$DB_USERNAME:$DB_PASSWORD@$DB_HOST/auth_db?sslmode=require" auth_db.dump
 ```
 
-**2. Tạo database và cấp quyền cho cả nhóm** (admin chạy, từ thư mục `dms`)
+Staging cũ: volume `dms-staging_postgres_data` vẫn còn trên máy staging, kể cả khi container `postgres` đã bị gỡ. Bật tạm một Postgres đọc volume đó rồi dump:
 
 ```bash
-docker exec -i postgres-shared psql -U app_admin -d appdb -v ON_ERROR_STOP=1 \
-  < scripts/shared-db/init-dms-databases.sql
+docker run -d --rm --name old-pg -v dms-staging_postgres_data:/var/lib/postgresql/data postgres:16-alpine
+sleep 5
+docker exec old-pg pg_dump -Fc -U <POSTGRES_USER cũ> auth_db > auth_db.dump   # lặp lại cho 4 database còn lại
+docker stop old-pg
 ```
 
-Script tạo 5 database ở bảng trên và cấp quyền cho `baohuy`, `giabao`, `giahuy`, `kimanh`. Chạy lại nhiều lần không sao. Bảng do ai tạo cũng thuộc role chung `dms_owner`, nên thành viên khác vẫn sửa được.
-
-**3. Vào DB để tương tác**
-
-```bash
-psql "postgresql://<role>:<mật_khẩu>@100.67.250.1:5432/category_db"
-```
-
-**4. Thêm database cho service mới**
-
-Thêm tên database (vd. `document_db`) vào hai danh sách database trong `scripts/shared-db/init-dms-databases.sql`, chạy lại bước 2.
-
-Sau đó thêm `<TÊN>_DB_URL=jdbc:postgresql://100.67.250.1:5432/<tên>_db` vào `.env.example`. Bảng do Flyway của service tạo khi service khởi động.
-
-**Thêm thành viên mới:** tạo role rồi thêm tên vào hai danh sách thành viên trong script, chạy lại bước 2.
-
-```sql
--- docker compose exec postgres psql -U app_admin -d appdb
-CREATE ROLE ten_thanh_vien LOGIN PASSWORD 'mat_khau_rieng';
-```
+Chép dữ liệu khi service **chưa** chạy trên Neon, để tránh trùng dữ liệu seed. Dùng `pg_dump` 16 trở lên.
 
 Không commit `.env` và không ghi mật khẩu vào repo.

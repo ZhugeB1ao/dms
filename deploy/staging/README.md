@@ -11,11 +11,11 @@ Trình duyệt → https://<địa-chỉ-staging>   (Cloudflare Access: chỉ em
    → front-end (Nginx)
         ├─ "/"      → giao diện React
         └─ "/api/…" → api-gateway → auth / account / category / department / organization
-                                       → postgres (1 container, 5 database) + minio
+                                       → Neon (Postgres cloud, branch staging, 5 database) + minio
 ```
 
-- Chỉ `front-end` mở cổng, và chỉ ở `127.0.0.1`. Postgres, MinIO, gateway và các service
-  không mở cổng nào ra ngoài.
+- Chỉ `front-end` mở cổng, và chỉ ở `127.0.0.1`. MinIO, gateway và các service
+  không mở cổng nào ra ngoài. Database nằm trên Neon (kết nối ra ngoài qua SSL), không chạy trong Docker.
 - Frontend và API dùng chung một địa chỉ (Nginx chuyển `/api` sang gateway), nên không cần
   URL riêng cho backend và không phải xử lý CORS.
 
@@ -44,15 +44,17 @@ Merge vào main → GitHub Actions (.github/workflows/ci.yml): lint, test
 ## Dựng staging lần đầu
 
 Yêu cầu: Docker (Docker Desktop trên macOS, bật Rosetta nếu máy chip Apple vì CI build
-image `linux/amd64`), tối thiểu 6 GB RAM cho Docker.
+image `linux/amd64`), tối thiểu 6 GB RAM cho Docker. Branch `staging` trên Neon đã có
+5 database (xem [HUONG_DAN_DB_CHUNG.md](../../HUONG_DAN_DB_CHUNG.md#dựng-neon-lần-đầu-admin)).
 
 ```bash
 cd deploy/staging
 
 # 1. Tạo file secret (mỗi giá trị khác môi trường dev)
 cat > .env.staging <<EOF
-POSTGRES_USER=dms
-POSTGRES_PASSWORD=$(openssl rand -hex 24)
+DB_HOST=<host branch staging trên Neon, không có -pooler>
+DB_USERNAME=<role Neon>
+DB_PASSWORD=<mật khẩu role Neon>
 JWT_SECRET_KEY=$(openssl rand -hex 32)
 GATEWAY_SHARED_SECRET=$(openssl rand -hex 32)
 MINIO_ROOT_USER=dms-minio
@@ -101,7 +103,7 @@ DC="docker compose -f docker-compose.yml --env-file .env.staging"
 | Khởi động lại một service | `$DC restart auth-service` |
 | Tắt (giữ dữ liệu) | `$DC down` |
 | Tắt và **xoá sạch dữ liệu** | `$DC down -v` (cẩn thận) |
-| Sao lưu DB | `$DC exec postgres sh -c 'pg_dumpall -U "$POSTGRES_USER"' > backup-$(date +%F).sql` |
+| Sao lưu / khôi phục DB | Neon tự giữ lịch sử (point-in-time restore): Neon Console → Branches → `staging` → Restore. Bản dump tay: xem HUONG_DAN_DB_CHUNG.md |
 | Quay về bản cũ | Thêm `IMAGE_TAG=sha-xxxxxxx` vào `.env.staging`, chạy lại `staging-update.sh` |
 | Xem lịch sử cập nhật | `tail -50 logs/update.log` |
 
@@ -128,10 +130,14 @@ Mật khẩu tài khoản mẫu đã công khai trong repo, chỉ dùng cho stag
 | Token đẩy image lên GHCR | `GITHUB_TOKEN` do GitHub Actions tự cấp |
 
 Nghi lộ secret: tạo giá trị mới bằng `openssl rand -hex 32`, sửa `.env.staging`, chạy lại
-`$DC up -d`. Riêng `POSTGRES_PASSWORD` phải đổi trong Postgres (`ALTER USER`) trước.
+`$DC up -d`. Riêng `DB_PASSWORD`: Neon Console → Roles → Reset password, rồi cập nhật `.env.staging`.
 
 ## Lưu ý
 
 - Dùng chung tên project `dms-staging` với cấu hình build tại chỗ trước đây, nên dữ liệu
-  (volume `dms-staging_postgres_data`, `dms-staging_minio_data`) được giữ nguyên khi chuyển.
+  (volume `dms-staging_minio_data`) được giữ nguyên khi chuyển.
+- Chuyển từ Postgres trong Docker sang Neon: `staging-update.sh` (`--remove-orphans`) sẽ gỡ
+  container `postgres` cũ, nhưng volume `dms-staging_postgres_data` **không bị xóa**. Cần chép
+  dữ liệu cũ thì xem mục "Chép dữ liệu cũ sang Neon" trong HUONG_DAN_DB_CHUNG.md. Chạy ổn
+  một thời gian rồi mới xóa: `docker volume rm dms-staging_postgres_data`.
 - Thêm/bớt người truy cập: Cloudflare Zero Trust → Access controls → Policies → sửa danh sách Emails.

@@ -6,7 +6,8 @@
 #   docker compose -f docker-compose.yml --env-file .env.staging pull
 #   docker compose -f docker-compose.yml --env-file .env.staging up -d
 #
-# - Cung "name: dms-staging" voi file build tai cho => dung lai volume, KHONG mat du lieu.
+# - Cung "name: dms-staging" voi file build tai cho => dung lai volume MinIO, KHONG mat tep.
+# - Database tren Neon: volume postgres_data cu (neu co) khong con dung nhung KHONG bi xoa.
 # - IMAGE_TAG mac dinh "latest"; muon quay lai ban cu thi dat IMAGE_TAG=sha-xxxxxxx trong .env.staging.
 # - CI hien chi build linux/amd64; Mac chip Apple chay qua Rosetta (bat trong Docker Desktop).
 # ==============================================================================
@@ -20,34 +21,16 @@ x-app: &app
 x-java-service: &java-service
   <<: *app
   mem_limit: 768m
-  depends_on:
-    postgres:
-      condition: service_healthy
 
+# Database nam tren Neon (Postgres cloud), khong chay Postgres trong Docker.
 x-java-env: &java-env
   JAVA_TOOL_OPTIONS: "-Xmx256m -Xms64m -XX:+UseG1GC"
-  SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:?Thieu POSTGRES_USER trong .env.staging}
-  SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:?Thieu POSTGRES_PASSWORD trong .env.staging}
+  SPRING_DATASOURCE_USERNAME: ${DB_USERNAME:?Thieu DB_USERNAME trong .env.staging}
+  SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:?Thieu DB_PASSWORD trong .env.staging}
   SPRING_JPA_SHOW_SQL: "false"
   APP_SECURITY_GATEWAY_SECRET: ${GATEWAY_SHARED_SECRET:?Thieu GATEWAY_SHARED_SECRET trong .env.staging}
 
 services:
-  postgres:
-    image: postgres:16-alpine
-    restart: unless-stopped
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER:?Thieu POSTGRES_USER trong .env.staging}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Thieu POSTGRES_PASSWORD trong .env.staging}
-      POSTGRES_DB: postgres
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-      - ./staging-init:/docker-entrypoint-initdb.d:ro
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d organization_db"]
-      interval: 5s
-      timeout: 3s
-      retries: 20
-
   auth-service:
     <<: *java-service
     image: ${IMAGE_REGISTRY:-ghcr.io/zhugeb1ao}/dms-auth-service:${IMAGE_TAG:-latest}
@@ -55,7 +38,7 @@ services:
       <<: *java-env
       SERVER_PORT: 8081
       GRPC_SERVER_PORT: 9091
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/auth_db
+      SPRING_DATASOURCE_URL: jdbc:postgresql://${DB_HOST:?Thieu DB_HOST trong .env.staging}/auth_db?sslmode=require
       APPLICATION_JWT_SECRET_KEY: ${JWT_SECRET_KEY:?Thieu JWT_SECRET_KEY trong .env.staging}
       ACCOUNT_GRPC_HOST: account-service
       ACCOUNT_GRPC_PORT: 9092
@@ -67,7 +50,7 @@ services:
       <<: *java-env
       SERVER_PORT: 8084
       GRPC_SERVER_PORT: 9092
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/account_db
+      SPRING_DATASOURCE_URL: jdbc:postgresql://${DB_HOST:?Thieu DB_HOST trong .env.staging}/account_db?sslmode=require
       AUTH_GRPC_HOST: auth-service
       AUTH_GRPC_PORT: 9091
       APP_SEED_ENABLED: "true"
@@ -78,7 +61,7 @@ services:
     environment:
       <<: *java-env
       SERVER_PORT: 8080
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/category_db
+      SPRING_DATASOURCE_URL: jdbc:postgresql://${DB_HOST:?Thieu DB_HOST trong .env.staging}/category_db?sslmode=require
       APP_SECURITY_MOCK_ENABLED: "false"
 
   department-service:
@@ -87,7 +70,7 @@ services:
     environment:
       <<: *java-env
       SERVER_PORT: 8082
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/department_db
+      SPRING_DATASOURCE_URL: jdbc:postgresql://${DB_HOST:?Thieu DB_HOST trong .env.staging}/department_db?sslmode=require
       APP_SECURITY_MOCK_ENABLED: "false"
       APP_ACCOUNT_GRPC_ENABLED: "true"
       APP_ACCOUNT_GRPC_HOST: account-service
@@ -99,7 +82,7 @@ services:
     environment:
       <<: *java-env
       SERVER_PORT: 8083
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/organization_db
+      SPRING_DATASOURCE_URL: jdbc:postgresql://${DB_HOST:?Thieu DB_HOST trong .env.staging}/organization_db?sslmode=require
       APP_SECURITY_MOCK_ENABLED: "false"
 
   api-gateway:
@@ -155,5 +138,4 @@ services:
       - "127.0.0.1:${FRONTEND_PORT:-8888}:80"
 
 volumes:
-  postgres_data:
   minio_data:

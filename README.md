@@ -2,10 +2,11 @@
 
 ## 🚀 Khởi Chạy Môi Trường Dev (Quick Start)
 
-Toàn bộ hệ thống (Frontend + các dịch vụ Backend Java + Database PostgreSQL trên Docker) có thể khởi chạy bằng 1 lệnh duy nhất:
+Toàn bộ hệ thống (Frontend + các dịch vụ Backend Java; Database PostgreSQL trên Neon) có thể khởi chạy bằng 1 lệnh duy nhất:
 
 ```bash
 cd docs
+cp .env.example .env   # lần đầu: điền DB_HOST, DB_USERNAME, DB_PASSWORD của Neon
 ./start-dev.sh
 ```
 

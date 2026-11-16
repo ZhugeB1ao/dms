@@ -1,14 +1,13 @@
+# Database dùng Neon (Postgres trên cloud), không chạy Postgres trong Docker.
+# Điền DB_HOST, DB_USERNAME, DB_PASSWORD vào .env (cp .env.example .env). Chi tiết: HUONG_DAN_DB_CHUNG.md
 name: dms-dev-databases
-
-include:
-  - docker-compose.db.yml
 
 x-java-service: &java-service
   restart: unless-stopped
   environment: &java-env
     JAVA_TOOL_OPTIONS: "-Xmx256m -Xms64m -XX:+UseG1GC"
-    SPRING_DATASOURCE_USERNAME: ${DB_USERNAME:-postgres}
-    SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:-postgres}
+    SPRING_DATASOURCE_USERNAME: ${DB_USERNAME:?Thiếu DB_USERNAME trong .env}
+    SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:?Thiếu DB_PASSWORD trong .env}
     APP_SECURITY_GATEWAY_SECRET: ${GATEWAY_SHARED_SECRET:-hsu-dev-gateway-secret-2026}
 
 services:
@@ -16,15 +15,11 @@ services:
     <<: *java-service
     build: ./auth-service
     container_name: dms-auth-service
-    depends_on:
-      auth-postgres:
-        condition: service_healthy
     environment:
       <<: *java-env
       SERVER_PORT: 8081
       GRPC_SERVER_PORT: 9091
-      SPRING_DATASOURCE_URL: ${AUTH_DB_URL:-jdbc:postgresql://auth-postgres:5432/auth_db}
-      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:-Bao1234567890@}
+      SPRING_DATASOURCE_URL: jdbc:postgresql://${DB_HOST:?Thiếu DB_HOST trong .env}/auth_db?sslmode=require
       APPLICATION_JWT_SECRET_KEY: ${JWT_SECRET_KEY:-404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970}
       ACCOUNT_GRPC_HOST: account-service
       ACCOUNT_GRPC_PORT: 9092
@@ -35,14 +30,11 @@ services:
     <<: *java-service
     build: ./account-service
     container_name: dms-account-service
-    depends_on:
-      account-postgres:
-        condition: service_healthy
     environment:
       <<: *java-env
       SERVER_PORT: 8084
       GRPC_SERVER_PORT: 9092
-      SPRING_DATASOURCE_URL: ${ACCOUNT_DB_URL:-jdbc:postgresql://account-postgres:5432/account_db}
+      SPRING_DATASOURCE_URL: jdbc:postgresql://${DB_HOST:?Thiếu DB_HOST trong .env}/account_db?sslmode=require
       AUTH_GRPC_HOST: auth-service
       AUTH_GRPC_PORT: 9091
       APP_SEED_ENABLED: ${ACCOUNT_SEED_ENABLED:-true}
@@ -53,13 +45,10 @@ services:
     <<: *java-service
     build: ./category-service
     container_name: dms-category-service
-    depends_on:
-      category-postgres:
-        condition: service_healthy
     environment:
       <<: *java-env
       SERVER_PORT: 8080
-      SPRING_DATASOURCE_URL: ${CATEGORY_DB_URL:-jdbc:postgresql://category-postgres:5432/category_db}
+      SPRING_DATASOURCE_URL: jdbc:postgresql://${DB_HOST:?Thiếu DB_HOST trong .env}/category_db?sslmode=require
       APP_SECURITY_MOCK_ENABLED: "false"
     ports:
       - "127.0.0.1:8080:8080"
@@ -68,13 +57,10 @@ services:
     <<: *java-service
     build: ./department-service
     container_name: dms-department-service
-    depends_on:
-      department-postgres:
-        condition: service_healthy
     environment:
       <<: *java-env
       SERVER_PORT: 8082
-      SPRING_DATASOURCE_URL: ${DEPARTMENT_DB_URL:-jdbc:postgresql://department-postgres:5432/department_db}
+      SPRING_DATASOURCE_URL: jdbc:postgresql://${DB_HOST:?Thiếu DB_HOST trong .env}/department_db?sslmode=require
       APP_SECURITY_MOCK_ENABLED: "false"
       APP_ACCOUNT_GRPC_ENABLED: "true"
       APP_ACCOUNT_GRPC_HOST: account-service
@@ -86,13 +72,10 @@ services:
     <<: *java-service
     build: ./organization-service
     container_name: dms-organization-service
-    depends_on:
-      organization-postgres:
-        condition: service_healthy
     environment:
       <<: *java-env
       SERVER_PORT: 8083
-      SPRING_DATASOURCE_URL: ${ORGANIZATION_DB_URL:-jdbc:postgresql://organization-postgres:5432/organization_db}
+      SPRING_DATASOURCE_URL: jdbc:postgresql://${DB_HOST:?Thiếu DB_HOST trong .env}/organization_db?sslmode=require
       APP_SECURITY_MOCK_ENABLED: "false"
     ports:
       - "127.0.0.1:8083:8083"
