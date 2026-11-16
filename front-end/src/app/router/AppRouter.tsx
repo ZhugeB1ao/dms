@@ -8,6 +8,9 @@ import DepartmentsPage from '../../features/departments/pages/DepartmentsPage.ts
 import OrganizationsPage from '../../features/organizations/pages/OrganizationsPage.tsx'
 import OcrPage from '../../features/ocr/pages/OcrPage.tsx'
 import ChatPage from '../../features/chat/pages/ChatPage.tsx'
+import DocumentsPage from '../../features/documents/pages/DocumentsPage.tsx'
+import DocumentDetailPage from '../../features/documents/pages/DocumentDetailPage.tsx'
+import type { DocumentDirection } from '../../features/documents/types.ts'
 import AppLayout from '../../layouts/AppLayout/AppLayout.tsx'
 import Workspace from '../../pages/Workspace.tsx'
 import ForbiddenPage from '../../pages/ForbiddenPage.tsx'
@@ -49,6 +52,7 @@ function Guard({ roles }: { roles: Role[] }) {
 }
 
 export default function AppRouter() {
+  const location = useLocation()
   return (
     <Routes>
       <Route element={<AppLayout />}>
@@ -66,7 +70,24 @@ export default function AppRouter() {
             <Route
               path={route.path}
               element={
-                route.path === '/change-password' ? (
+                route.path === '/documents' ? (
+                  <Navigate
+                    replace
+                    to={{
+                      pathname: '/documents/incoming',
+                      search: location.search,
+                      hash: location.hash,
+                    }}
+                  />
+                ) : route.path.startsWith('/documents/') ? (
+                  <DocumentsPage
+                    direction={
+                      route.path
+                        .split('/')[2]
+                        .toUpperCase() as DocumentDirection
+                    }
+                  />
+                ) : route.path === '/change-password' ? (
                   <AccountPage key="change" mode="change" />
                 ) : route.path === '/admin/departments' ? (
                   <DepartmentsPage />
@@ -89,6 +110,9 @@ export default function AppRouter() {
             />
           </Route>
         ))}
+        <Route element={<Guard roles={['ADMIN', 'MANAGER', 'EMPLOYEE']} />}>
+          <Route path="/documents/:id" element={<DocumentDetailPage />} />
+        </Route>
         <Route path="403" element={<ForbiddenPage />} />
         <Route path="*" element={<NotFoundPage />} />
       </Route>

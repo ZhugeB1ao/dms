@@ -1,4 +1,6 @@
 import { http, HttpResponse, delay } from 'msw'
+import { createDocumentHandlers } from './documentHandlers.ts'
+import { resetDocuments } from './documents.ts'
 import type { Role } from '../shared/types/domain.ts'
 import type {
   CategoryItem,
@@ -260,6 +262,7 @@ function save() {
 }
 
 export function resetMock() {
+  resetDocuments()
   state = null
   accounts = initialAccounts.map((a) => ({ ...a }))
   passwords = {}
@@ -899,9 +902,10 @@ export const coreHandlers = [
     const document = documents[docId]
     if (!document) return fail(404, 'NOT_FOUND', 'Document not found.')
     const allowed =
-      user.role === 'MANAGER'
+      user.role === 'ADMIN' ||
+      (user.role === 'MANAGER'
         ? user.departmentId === document.departmentId
-        : user.role === 'EMPLOYEE' && document.assigneeIds.includes(user.id)
+        : user.role === 'EMPLOYEE' && document.assigneeIds.includes(user.id))
     return allowed
       ? HttpResponse.json(document)
       : fail(
@@ -923,6 +927,14 @@ export const coreHandlers = [
   }),
 ]
 
-export const handlers = [...coreHandlers, ...createMasterDataHandlers(base)]
+export const handlers = [
+  ...coreHandlers,
+  ...createMasterDataHandlers(base),
+  ...createDocumentHandlers(base, userFor, () => ({
+    categories,
+    departments,
+    organizations,
+  })),
+]
 
 export const browserHandlers = handlers

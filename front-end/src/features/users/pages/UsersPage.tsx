@@ -19,6 +19,7 @@ import UserFormDialog from '../components/UserFormDialog.tsx'
 import UserActionDialog from '../components/UserActionDialog.tsx'
 import {
   CrudHeader,
+  CrudPagination,
   CrudRowActions,
   CrudToolbar,
 } from '../../../shared/components/CrudPageLayout.tsx'
@@ -46,6 +47,7 @@ export default function UsersPage() {
   const [departments, setDepartments] = useState<DepartmentItem[]>([])
   const [optionsError, setOptionsError] = useState('')
   const [dialog, setDialog] = useState<
+    | { action: 'view'; account: ManagedAccount }
     | { action: 'edit'; account: ManagedAccount | null }
     | { action: UserAction; account: ManagedAccount }
     | null
@@ -113,7 +115,6 @@ export default function UsersPage() {
     setDialog(null)
     setRevision((n) => n + 1)
   }
-  const pages = Math.max(1, result?.totalPages ?? 1)
 
   return (
     <section className="p-6 sm:p-10">
@@ -253,14 +254,26 @@ export default function UsersPage() {
                     return (
                       <tr
                         key={account.id}
-                        className={`transition-colors hover:bg-[#1e1e1e]/40 ${
+                        className={`cursor-pointer transition-colors hover:bg-[#1e1e1e]/40 ${
                           !account.active ? 'row-inactive' : ''
                         }`}
+                        onClick={(e) => {
+                          // Row buttons and links keep their own action.
+                          if (!(e.target as HTMLElement).closest('button, a'))
+                            setDialog({ action: 'view', account })
+                        }}
                       >
                         <td>
-                          <span className="font-medium text-[#f5f5f5]">
+                          <button
+                            type="button"
+                            className="font-medium text-[#f5f5f5] underline-offset-4 hover:underline"
+                            aria-label={`View details ${account.username}`}
+                            onClick={() =>
+                              setDialog({ action: 'view', account })
+                            }
+                          >
                             {account.username}
-                          </span>
+                          </button>
                           <span className="block text-xs text-[#a3a3a3] break-all">
                             {account.email}
                           </span>
@@ -333,55 +346,18 @@ export default function UsersPage() {
               </tbody>
             </table>
           </div>
-          <div className="management-pagination">
-            <div className="user-field">
-              <label htmlFor="page-size">Rows per page</label>
-              <Select
-                id="page-size"
-                value={query.size}
-                onChange={(e) =>
-                  filter({
-                    size: Number(e.target.value) as AccountQuery['size'],
-                  })
-                }
-              >
-                {[10, 20, 50].map((size) => (
-                  <option key={size} value={size}>
-                    {size}
-                  </option>
-                ))}
-              </Select>
-            </div>
-            <span>
-              Page {query.page + 1} / {pages}
-            </span>
-            <div className="flex gap-2">
-              <Button
-                variant="secondary"
-                disabled={loading || query.page <= 0}
-                onClick={() =>
-                  setQuery((previous) => ({
-                    ...previous,
-                    page: previous.page - 1,
-                  }))
-                }
-              >
-                Previous page
-              </Button>
-              <Button
-                variant="secondary"
-                disabled={loading || query.page + 1 >= pages}
-                onClick={() =>
-                  setQuery((previous) => ({
-                    ...previous,
-                    page: previous.page + 1,
-                  }))
-                }
-              >
-                Next page
-              </Button>
-            </div>
-          </div>
+          <CrudPagination
+            page={query.page}
+            totalPages={result?.totalPages ?? 1}
+            size={query.size}
+            disabled={loading}
+            onPageChange={(page) =>
+              setQuery((previous) => ({ ...previous, page }))
+            }
+            onSizeChange={(size) =>
+              filter({ size: size as AccountQuery['size'] })
+            }
+          />
         </div>
       )}
       {dialog?.action === 'edit' && (
@@ -393,7 +369,14 @@ export default function UsersPage() {
           }
         />
       )}
-      {dialog && dialog.action !== 'edit' && (
+      {dialog?.action === 'view' && (
+        <UserFormDialog
+          account={dialog.account}
+          readOnly
+          onClose={() => setDialog(null)}
+        />
+      )}
+      {dialog && dialog.action !== 'edit' && dialog.action !== 'view' && (
         <UserActionDialog
           account={dialog.account}
           action={dialog.action}

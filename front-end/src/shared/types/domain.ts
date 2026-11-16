@@ -13,4 +13,5 @@ export interface RouteConfig {
   path: string
   label: string
   roles: Role[]
+  showInSidebar?: boolean
 }
