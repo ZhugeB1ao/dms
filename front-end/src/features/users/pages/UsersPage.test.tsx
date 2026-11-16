@@ -174,3 +174,19 @@ it('clears the search box with Clear filters and explains an empty result', asyn
   expect(box).toHaveValue('')
   expect(await screen.findByText('28 accounts')).toBeVisible()
 })
+it('opens a read-only detail dialog when a row is clicked', async () => {
+  const user = userEvent.setup()
+  await renderAccountRoute()
+  const row = await screen.findByRole('row', { name: /employee@demo.test/ })
+  await user.click(within(row).getByText('employee@demo.test'))
+  const dialog = await screen.findByRole('dialog', { name: 'Account details' })
+  expect(within(dialog).getByLabelText('Email')).toHaveValue(
+    'employee@demo.test',
+  )
+  expect(within(dialog).getByLabelText('Email')).toBeDisabled()
+  expect(
+    within(dialog).queryByRole('button', { name: 'Save account' }),
+  ).toBeNull()
+  await user.click(within(dialog).getByRole('button', { name: 'Close' }))
+  await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+})

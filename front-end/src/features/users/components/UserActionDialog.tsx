@@ -4,7 +4,7 @@ import { usersApi } from '../api/usersApi.ts'
 import { userError } from '../api/userErrors.ts'
 import type { ManagedAccount, UserAction } from '../types.ts'
 import AccountDialog from './AccountDialog.tsx'
-import FormField from './FormField.tsx'
+import FormField from '../../../shared/components/FormField.tsx'
 import { validateForm, focusError, errorAttributes } from './formValidation.ts'
 
 const titles = {
