@@ -137,8 +137,11 @@ export default function OrganizationsPage() {
         onSubmit={crud.handleSubmit}
       >
         <div>
-          <label htmlFor="organization-name" className="field-label">
-            Organization name *
+          <label
+            htmlFor="organization-name"
+            className="field-label required-label"
+          >
+            Organization name
           </label>
           <input
             id="organization-name"

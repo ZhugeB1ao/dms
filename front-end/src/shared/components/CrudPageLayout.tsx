@@ -175,6 +175,7 @@ export interface CrudFormDialogProps {
   modalMessage?: string
   submitting: boolean
   isCreate: boolean
+  submitDisabled?: boolean
   onClose: () => void
   onSubmit: (event: FormEvent<HTMLFormElement>) => void
   children: ReactNode
@@ -188,6 +189,7 @@ export function CrudFormDialog({
   modalMessage,
   submitting,
   isCreate,
+  submitDisabled = false,
   onClose,
   onSubmit,
   children,
@@ -197,12 +199,17 @@ export function CrudFormDialog({
       ref={modalRef}
       className="auth-dialog"
       aria-labelledby={titleId}
-      onClick={(e) => e.target === e.currentTarget && onClose()}
+      onClick={(e) => !submitting && e.target === e.currentTarget && onClose()}
+      onCancel={(e) => {
+        e.preventDefault()
+        if (!submitting) onClose()
+      }}
     >
       <div className="auth-panel">
         <Button
           variant="icon"
           aria-label="Close dialog"
+          disabled={submitting}
           onClick={onClose}
           className="modal-close"
         >
@@ -214,7 +221,10 @@ export function CrudFormDialog({
         </h2>
 
         {modalMessage && (
-          <div className="mb-4 p-3 rounded-lg bg-red-950/40 border border-red-800 text-red-200 text-sm">
+          <div
+            role="alert"
+            className="mb-4 p-3 rounded-lg bg-red-950/40 border border-red-800 text-red-200 text-sm"
+          >
             {modalMessage}
           </div>
         )}
@@ -236,7 +246,11 @@ export function CrudFormDialog({
             >
               Cancel
             </Button>
-            <Button variant="primary" type="submit" disabled={submitting}>
+            <Button
+              variant="primary"
+              type="submit"
+              disabled={submitting || submitDisabled}
+            >
               {submitting ? 'Saving…' : isCreate ? 'Create' : 'Save'}
             </Button>
           </div>
@@ -253,6 +267,8 @@ export interface ConfirmDeactivateDialogProps {
   description: ReactNode
   errorMessage?: string
   submitting: boolean
+  confirmLabel?: string
+  pendingLabel?: string
   onClose: () => void
   onConfirm: () => void
 }
@@ -264,6 +280,8 @@ export function ConfirmDeactivateDialog({
   description,
   errorMessage,
   submitting,
+  confirmLabel = 'Deactivate',
+  pendingLabel = 'Deactivating…',
   onClose,
   onConfirm,
 }: ConfirmDeactivateDialogProps) {
@@ -272,12 +290,17 @@ export function ConfirmDeactivateDialog({
       ref={confirmModalRef}
       className="auth-dialog"
       aria-labelledby={confirmTitleId}
-      onClick={(e) => e.target === e.currentTarget && onClose()}
+      onClick={(e) => !submitting && e.target === e.currentTarget && onClose()}
+      onCancel={(e) => {
+        e.preventDefault()
+        if (!submitting) onClose()
+      }}
     >
       <div className="auth-panel">
         <Button
           variant="icon"
           aria-label="Close dialog"
+          disabled={submitting}
           onClick={onClose}
           className="modal-close"
         >
@@ -320,10 +343,68 @@ export function ConfirmDeactivateDialog({
             disabled={submitting}
             className="!bg-red-600 hover:!bg-red-500 !text-white"
           >
-            {submitting ? 'Deactivating…' : 'Deactivate'}
+            {submitting ? pendingLabel : confirmLabel}
           </Button>
         </div>
       </div>
     </dialog>
+  )
+}
+
+export interface CrudPaginationProps {
+  /** Zero-based page index. */
+  page: number
+  totalPages: number
+  size: number
+  onPageChange: (page: number) => void
+  onSizeChange: (size: number) => void
+  disabled?: boolean
+}
+
+export function CrudPagination({
+  page,
+  totalPages,
+  size,
+  onPageChange,
+  onSizeChange,
+  disabled = false,
+}: CrudPaginationProps) {
+  const pages = Math.max(1, totalPages)
+  return (
+    <div className="management-pagination">
+      <div className="user-field">
+        <label htmlFor="page-size">Rows per page</label>
+        <Select
+          id="page-size"
+          value={size}
+          onChange={(e) => onSizeChange(Number(e.target.value))}
+        >
+          {[10, 20, 50].map((n) => (
+            <option key={n} value={n}>
+              {n}
+            </option>
+          ))}
+        </Select>
+      </div>
+      <span>
+        Page {page + 1} / {pages}
+      </span>
+      <div className="flex gap-2">
+        <Button
+          variant="secondary"
+          disabled={disabled || page <= 0}
+          onClick={() => onPageChange(page - 1)}
+        >
+          Previous page
+        </Button>
+        <Button
+          variant="secondary"
+          disabled={disabled || page + 1 >= pages}
+          onClick={() => onPageChange(page + 1)}
+        >
+          Next page
+        </Button>
+      </div>
+    </div>
   )
 }
