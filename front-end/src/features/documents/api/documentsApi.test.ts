@@ -1,7 +1,7 @@
 import { afterAll, afterEach, beforeAll, expect, it } from 'vitest'
 import { setupServer } from 'msw/node'
 import { delay, http, HttpResponse } from 'msw'
-import { documentsApi } from './documentsApi.ts'
+import { documentsApi } from '@/features/documents/api/documentsApi.ts'
 
 const server = setupServer()
 beforeAll(() => server.listen({ onUnhandledFrame: 'error' }))

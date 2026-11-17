@@ -1,9 +1,9 @@
-import Select from '../../../shared/components/Select.tsx'
+import Select from '@/shared/components/Select.tsx'
 import { useEffect, useState, type SelectHTMLAttributes } from 'react'
 import {
   organizationApi,
   type OrganizationItem,
-} from '../api/organizationApi.ts'
+} from '@/features/organizations/api/organizationApi.ts'
 
 export interface OrganizationSelectProps extends Omit<
   SelectHTMLAttributes<HTMLSelectElement>,

@@ -1,4 +1,4 @@
-import type { Role, RouteConfig, User } from '../../shared/types/domain.ts'
+import type { Role, RouteConfig, User } from '@/shared/types/domain.ts'
 
 const staff: Role[] = ['MANAGER', 'EMPLOYEE']
 const docRoles: Role[] = ['ADMIN', ...staff]

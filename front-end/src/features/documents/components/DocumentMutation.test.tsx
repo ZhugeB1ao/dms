@@ -5,8 +5,8 @@ import {
   documentServer,
   openCreateDraft,
   renderDocumentRoute,
-} from '../../../test/documentFeature.tsx'
-import { documentsApi } from '../api/documentsApi.ts'
+} from '@/test/documentFeature.tsx'
+import { documentsApi } from '@/features/documents/api/documentsApi.ts'
 
 async function fillDraft() {
   const { user, dialog } = await openCreateDraft()

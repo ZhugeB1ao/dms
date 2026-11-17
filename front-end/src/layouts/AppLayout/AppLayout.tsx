@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState, type MouseEvent } from 'react'
-import Header from './Header.tsx'
-import Sidebar from './Sidebar.tsx'
-import SignupDemoModal from '../../features/auth/components/SignupDemoModal.tsx'
-import type { DemoAuthMode } from '../../features/auth/components/SignupDemoForm.tsx'
+import Header from '@/layouts/AppLayout/Header.tsx'
+import Sidebar from '@/layouts/AppLayout/Sidebar.tsx'
+import SignupDemoModal from '@/features/auth/components/SignupDemoModal.tsx'
+import type { DemoAuthMode } from '@/features/auth/components/SignupDemoForm.tsx'
 import { Outlet, useNavigate } from 'react-router'
-import { useAuth } from '../../features/auth/context/useAuth.ts'
+import { useAuth } from '@/features/auth/context/useAuth.ts'
 
 export default function AppLayout() {
   const navigate = useNavigate()
@@ -12,6 +12,17 @@ export default function AppLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [authMode, setAuthMode] = useState<DemoAuthMode>('login')
   const [authOpen, setAuthOpen] = useState(false)
+  const openSidebarRef = useRef<HTMLButtonElement>(null)
+  const closeSidebarRef = useRef<HTMLButtonElement>(null)
+  const restoreSidebarFocus = useRef(false)
+
+  useEffect(() => {
+    if (!restoreSidebarFocus.current) return
+    restoreSidebarFocus.current = false
+    const target = sidebarOpen ? closeSidebarRef : openSidebarRef
+    target.current?.focus()
+  }, [sidebarOpen])
+
   const mobileSidebarRef = useRef<HTMLDialogElement>(null)
 
   useEffect(() => {
@@ -27,7 +38,10 @@ export default function AppLayout() {
   function toggleSidebar() {
     if (window.matchMedia('(max-width: 767px)').matches)
       mobileSidebarRef.current?.showModal()
-    else setSidebarOpen((open) => !open)
+    else {
+      restoreSidebarFocus.current = true
+      setSidebarOpen((open) => !open)
+    }
   }
 
   function openAuth(mode: DemoAuthMode) {
@@ -70,9 +84,16 @@ export default function AppLayout() {
         data-sidebar-open={sidebarOpen}
         data-authenticated={Boolean(auth.user)}
       >
-        {auth.user && <Sidebar collapsed={!sidebarOpen} />}
+        {auth.user && (
+          <Sidebar
+            closeRef={closeSidebarRef}
+            collapsed={!sidebarOpen}
+            onClose={toggleSidebar}
+          />
+        )}
         <div className="flex min-w-0 flex-1 flex-col">
           <Header
+            toggleRef={openSidebarRef}
             sidebarOpen={sidebarOpen}
             onToggleSidebar={toggleSidebar}
             onAuth={openAuth}

@@ -3,8 +3,8 @@ import Ajv from 'ajv'
 import axios from 'axios'
 import { beforeAll, afterAll, afterEach, expect, it } from 'vitest'
 import { setupServer } from 'msw/node'
-import { handlers, resetMock } from './handlers.ts'
-import { api, authHttp, session } from '../shared/api/http.ts'
+import { handlers, resetMock } from '@/mocks/handlers.ts'
+import { api, authHttp, session } from '@/shared/api/http.ts'
 
 const spec = JSON.parse(
   readFileSync('docs/api/openapi-auth.proposal.yaml', 'utf8'),

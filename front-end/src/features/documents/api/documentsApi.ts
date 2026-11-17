@@ -1,4 +1,4 @@
-import { api } from '../../../shared/api/http.ts'
+import { api } from '@/shared/api/http.ts'
 import type {
   DocumentAttachment,
   DocumentDetail,
@@ -6,7 +6,7 @@ import type {
   DocumentQuery,
   DraftInput,
   StatusHistoryEntry,
-} from '../types.ts'
+} from '@/features/documents/types.ts'
 export const documentsApi = {
   list: (params: DocumentQuery, signal?: AbortSignal) =>
     api.get<DocumentPage>('/documents', { params, signal }).then((r) => {

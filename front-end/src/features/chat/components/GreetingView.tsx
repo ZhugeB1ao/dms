@@ -1,4 +1,4 @@
-import { ChatInput } from './ChatInput.tsx'
+import { ChatInput } from '@/features/chat/components/ChatInput.tsx'
 
 export interface GreetingViewProps {
   onSend: (message: string) => void

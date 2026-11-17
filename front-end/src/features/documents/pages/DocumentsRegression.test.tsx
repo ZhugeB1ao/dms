@@ -2,12 +2,9 @@ import { expect, it } from 'vitest'
 import { fireEvent, screen, within, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { delay, http, HttpResponse } from 'msw'
-import {
-  documentServer,
-  renderDocumentRoute,
-} from '../../../test/documentFeature.tsx'
-import { documentStore } from '../../../mocks/documents.ts'
-import { categoryApi } from '../../categories/api/categoryApi.ts'
+import { documentServer, renderDocumentRoute } from '@/test/documentFeature.tsx'
+import { documentStore } from '@/mocks/documents.ts'
+import { categoryApi } from '@/features/categories/api/categoryApi.ts'
 
 it('ignores an older response after a filter changes', async () => {
   documentServer.use(

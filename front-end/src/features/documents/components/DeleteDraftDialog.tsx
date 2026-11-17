@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
-import { ConfirmDeactivateDialog } from '../../../shared/components/CrudPageLayout.tsx'
-import { documentsApi } from '../api/documentsApi.ts'
-import { documentError } from '../api/documentErrors.ts'
-import type { DocumentDetail } from '../types.ts'
+import { ConfirmDeactivateDialog } from '@/shared/components/CrudPageLayout.tsx'
+import { documentsApi } from '@/features/documents/api/documentsApi.ts'
+import { documentError } from '@/features/documents/api/documentErrors.ts'
+import type { DocumentDetail } from '@/features/documents/types.ts'
 
 type Props = {
   document: DocumentDetail

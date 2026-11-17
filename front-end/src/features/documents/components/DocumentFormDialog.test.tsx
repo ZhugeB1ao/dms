@@ -5,7 +5,7 @@ import {
   renderDocumentRoute,
   documentServer,
   openCreateDraft,
-} from '../../../test/documentFeature.tsx'
+} from '@/test/documentFeature.tsx'
 
 it('validates whitespace, creates and edits a draft through the shared form', async () => {
   await renderDocumentRoute()

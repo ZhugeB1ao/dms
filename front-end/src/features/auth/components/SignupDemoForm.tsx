@@ -1,5 +1,5 @@
 import { useRef, useState, type FormEvent } from 'react'
-import Button from '../../../shared/components/Button.tsx'
+import Button from '@/shared/components/Button.tsx'
 
 export type DemoAuthMode = 'login' | 'signup'
 

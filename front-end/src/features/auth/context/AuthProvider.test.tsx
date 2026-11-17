@@ -3,10 +3,10 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse, delay } from 'msw'
 import { setupServer } from 'msw/node'
-import { handlers, resetMock } from '../../../mocks/handlers.ts'
-import { authHttp, session } from '../../../shared/api/http.ts'
-import AuthProvider from './AuthProvider.tsx'
-import { useAuth } from './useAuth.ts'
+import { handlers, resetMock } from '@/mocks/handlers.ts'
+import { authHttp, session } from '@/shared/api/http.ts'
+import AuthProvider from '@/features/auth/context/AuthProvider.tsx'
+import { useAuth } from '@/features/auth/context/useAuth.ts'
 
 const server = setupServer(...handlers)
 beforeAll(() => server.listen({ onUnhandledFrame: 'error' }))

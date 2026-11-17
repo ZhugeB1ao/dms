@@ -1,5 +1,5 @@
 import { expect, it } from 'vitest'
-import { documentError } from './documentErrors.ts'
+import { documentError } from '@/features/documents/api/documentErrors.ts'
 
 it('maps conflicts and accepts only string field errors', () => {
   expect(documentError({ response: { status: 409 } }).message).toMatch(

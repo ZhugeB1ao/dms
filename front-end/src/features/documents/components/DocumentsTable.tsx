@@ -1,11 +1,11 @@
 import { Link } from 'react-router'
-import Button from '../../../shared/components/Button.tsx'
-import { DeleteIcon, EditIcon } from '../../../shared/components/Icons.tsx'
-import { crudRowIconClassName } from '../../../shared/components/crudStyles.ts'
-import type { User } from '../../../shared/types/domain.ts'
-import { canEditDraft } from '../permissions.ts'
-import type { DocumentSummary } from '../types.ts'
-import DocumentStatusBadge from './DocumentStatusBadge.tsx'
+import Button from '@/shared/components/Button.tsx'
+import { DeleteIcon, EditIcon } from '@/shared/components/Icons.tsx'
+import { crudRowIconClassName } from '@/shared/components/crudStyles.ts'
+import type { User } from '@/shared/types/domain.ts'
+import { canEditDraft } from '@/features/documents/permissions.ts'
+import type { DocumentSummary } from '@/features/documents/types.ts'
+import DocumentStatusBadge from '@/features/documents/components/DocumentStatusBadge.tsx'
 
 export default function DocumentsTable({
   rows,

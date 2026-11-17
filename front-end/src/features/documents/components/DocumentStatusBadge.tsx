@@ -1,4 +1,4 @@
-import { documentStatuses } from '../types.ts'
+import { documentStatuses } from '@/features/documents/types.ts'
 
 export default function DocumentStatusBadge({ status }: { status: string }) {
   const color =

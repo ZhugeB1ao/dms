@@ -1,8 +1,8 @@
 import { useCallback } from 'react'
-import Button from '../../../shared/components/Button.tsx'
-import { useFetch } from '../../../shared/hooks/useFetch.ts'
-import { documentsApi } from '../api/documentsApi.ts'
-import { documentError } from '../api/documentErrors.ts'
+import Button from '@/shared/components/Button.tsx'
+import { useFetch } from '@/shared/hooks/useFetch.ts'
+import { documentsApi } from '@/features/documents/api/documentsApi.ts'
+import { documentError } from '@/features/documents/api/documentErrors.ts'
 
 export default function DocumentAttachmentsTab({
   documentId,

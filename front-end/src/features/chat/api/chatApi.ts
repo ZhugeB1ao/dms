@@ -1,6 +1,6 @@
-import { env } from '../../../config/env.ts'
-import { refreshSession, session } from '../../../shared/api/http.ts'
-import type { SourceCitation } from '../types.ts'
+import { env } from '@/config/env.ts'
+import { refreshSession, session } from '@/shared/api/http.ts'
+import type { SourceCitation } from '@/features/chat/types.ts'
 
 interface RawApiSource {
   source: string

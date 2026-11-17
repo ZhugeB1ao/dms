@@ -1,9 +1,9 @@
-import ChatProvider from '../context/ChatProvider.tsx'
-import { useChat } from '../context/useChat.ts'
-import { GreetingView } from '../components/GreetingView.tsx'
-import { ChatArea } from '../components/ChatArea.tsx'
-import { ChatInput } from '../components/ChatInput.tsx'
-import { ChatSidePanel } from '../components/ChatSidePanel.tsx'
+import ChatProvider from '@/features/chat/context/ChatProvider.tsx'
+import { useChat } from '@/features/chat/context/useChat.ts'
+import { GreetingView } from '@/features/chat/components/GreetingView.tsx'
+import { ChatArea } from '@/features/chat/components/ChatArea.tsx'
+import { ChatInput } from '@/features/chat/components/ChatInput.tsx'
+import { ChatSidePanel } from '@/features/chat/components/ChatSidePanel.tsx'
 
 function ChatWorkspace() {
   const {

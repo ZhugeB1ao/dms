@@ -1,7 +1,10 @@
 import { createRef } from 'react'
 import { fireEvent, render, screen } from '@testing-library/react'
 import { expect, it, vi } from 'vitest'
-import { CrudFormDialog, ConfirmDeactivateDialog } from './CrudPageLayout.tsx'
+import {
+  CrudFormDialog,
+  ConfirmDeactivateDialog,
+} from '@/shared/components/CrudPageLayout.tsx'
 
 it.each([false, true])(
   'guards every close path when submitting=%s',

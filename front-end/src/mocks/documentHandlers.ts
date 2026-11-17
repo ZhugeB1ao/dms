@@ -1,11 +1,11 @@
 import { http, HttpResponse, passthrough } from 'msw'
-import type { Role } from '../shared/types/domain.ts'
+import type { Role } from '@/shared/types/domain.ts'
 import type {
   DocumentDetail,
   DraftInput,
   Lookup,
-} from '../features/documents/types.ts'
-import { documentStore } from './documents.ts'
+} from '@/features/documents/types.ts'
+import { documentStore } from '@/mocks/documents.ts'
 
 type Actor = { id: number; role: Role; departmentId: number | null }
 type Catalogs = {

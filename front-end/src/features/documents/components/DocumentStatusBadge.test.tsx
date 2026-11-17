@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react'
 import { expect, it } from 'vitest'
-import DocumentStatusBadge from './DocumentStatusBadge.tsx'
+import DocumentStatusBadge from '@/features/documents/components/DocumentStatusBadge.tsx'
 
 it.each(['ARCHIVED', '__proto__', 'constructor'])(
   'treats unknown status %s as read-only Unknown',

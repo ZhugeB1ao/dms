@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
-import Button from '../../../shared/components/Button.tsx'
-import { useAuth } from '../../auth/context/useAuth.ts'
-import { departmentApi } from '../../departments/api/departmentApi.ts'
-import { usersApi } from '../api/usersApi.ts'
-import { userError } from '../api/userErrors.ts'
-import type { ManagedAccount } from '../types.ts'
+import Button from '@/shared/components/Button.tsx'
+import { useAuth } from '@/features/auth/context/useAuth.ts'
+import { departmentApi } from '@/features/departments/api/departmentApi.ts'
+import { usersApi } from '@/features/users/api/usersApi.ts'
+import { userError } from '@/features/users/api/userErrors.ts'
+import type { ManagedAccount } from '@/features/users/types.ts'
 
 export default function ProfilePage() {
   const { user } = useAuth()

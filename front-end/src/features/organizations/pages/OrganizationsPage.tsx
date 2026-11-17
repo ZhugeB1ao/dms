@@ -4,12 +4,12 @@ import {
   CrudHeader,
   CrudRowActions,
   CrudToolbar,
-} from '../../../shared/components/CrudPageLayout.tsx'
-import { useCrudPage } from '../../../shared/hooks/useCrudPage.ts'
+} from '@/shared/components/CrudPageLayout.tsx'
+import { useCrudPage } from '@/shared/hooks/useCrudPage.ts'
 import {
   organizationApi,
   type OrganizationItem,
-} from '../api/organizationApi.ts'
+} from '@/features/organizations/api/organizationApi.ts'
 
 const fetchOrganizations = (statusFilter: string, signal: AbortSignal) =>
   statusFilter === 'active'

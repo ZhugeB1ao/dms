@@ -1,6 +1,6 @@
 import { AxiosError, AxiosHeaders } from 'axios'
 import { expect, it } from 'vitest'
-import { userError } from './userErrors.ts'
+import { userError } from '@/features/users/api/userErrors.ts'
 
 function failure(status: number, data: unknown) {
   const config = { headers: new AxiosHeaders() }

@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react'
-import type { Message } from '../types.ts'
-import { UserMessage } from './UserMessage.tsx'
-import { AssistantMessage } from './AssistantMessage.tsx'
+import type { Message } from '@/features/chat/types.ts'
+import { UserMessage } from '@/features/chat/components/UserMessage.tsx'
+import { AssistantMessage } from '@/features/chat/components/AssistantMessage.tsx'
 
 export interface ChatAreaProps {
   messages: Message[]

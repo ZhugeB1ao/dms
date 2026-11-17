@@ -5,25 +5,25 @@ import {
   useState,
   type FormEvent,
 } from 'react'
-import { useAuth } from '../../auth/context/useAuth.ts'
-import { categoryApi } from '../../categories/api/categoryApi.ts'
-import { departmentApi } from '../../departments/api/departmentApi.ts'
-import { organizationApi } from '../../organizations/api/organizationApi.ts'
-import { CrudFormDialog } from '../../../shared/components/CrudPageLayout.tsx'
-import Button from '../../../shared/components/Button.tsx'
-import FormField from '../../../shared/components/FormField.tsx'
-import Select from '../../../shared/components/Select.tsx'
-import { useFetch } from '../../../shared/hooks/useFetch.ts'
-import { documentsApi } from '../api/documentsApi.ts'
-import { documentError } from '../api/documentErrors.ts'
-import { canEditDraft } from '../permissions.ts'
+import { useAuth } from '@/features/auth/context/useAuth.ts'
+import { categoryApi } from '@/features/categories/api/categoryApi.ts'
+import { departmentApi } from '@/features/departments/api/departmentApi.ts'
+import { organizationApi } from '@/features/organizations/api/organizationApi.ts'
+import { CrudFormDialog } from '@/shared/components/CrudPageLayout.tsx'
+import Button from '@/shared/components/Button.tsx'
+import FormField from '@/shared/components/FormField.tsx'
+import Select from '@/shared/components/Select.tsx'
+import { useFetch } from '@/shared/hooks/useFetch.ts'
+import { documentsApi } from '@/features/documents/api/documentsApi.ts'
+import { documentError } from '@/features/documents/api/documentErrors.ts'
+import { canEditDraft } from '@/features/documents/permissions.ts'
 import {
   documentDirections,
   type DocumentDetail,
   type DocumentDirection,
   type DraftInput,
   type Lookup,
-} from '../types.ts'
+} from '@/features/documents/types.ts'
 
 const selectFields = [
   ['documentTypeId', 'documentType', 'Document type'],

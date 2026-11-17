@@ -1,9 +1,12 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import axios from 'axios'
-import { session, refreshSession } from '../../../shared/api/http.ts'
-import type { User } from '../../../shared/types/domain.ts'
-import { authApi, normalizeUser } from '../api/authApi.ts'
-import { AuthContext, type AuthStatus } from './useAuth.ts'
+import { session, refreshSession } from '@/shared/api/http.ts'
+import type { User } from '@/shared/types/domain.ts'
+import { authApi, normalizeUser } from '@/features/auth/api/authApi.ts'
+import {
+  AuthContext,
+  type AuthStatus,
+} from '@/features/auth/context/useAuth.ts'
 
 export default function AuthProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<{ status: AuthStatus; user: User | null }>(

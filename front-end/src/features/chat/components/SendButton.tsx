@@ -1,4 +1,4 @@
-import { SendArrowIcon } from '../../../shared/components/Icons.tsx'
+import { SendArrowIcon } from '@/shared/components/Icons.tsx'
 
 export interface SendButtonProps {
   onClick: () => void

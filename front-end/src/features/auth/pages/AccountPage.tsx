@@ -1,12 +1,20 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import axios from 'axios'
 import { Link, Navigate, useLocation } from 'react-router'
-import Button from '../../../shared/components/Button.tsx'
-import { authApi } from '../api/authApi.ts'
-import { useAuth } from '../context/useAuth.ts'
-import { safeDestination } from '../../../app/router/access.ts'
+import Button from '@/shared/components/Button.tsx'
+import { authApi } from '@/features/auth/api/authApi.ts'
+import { useAuth } from '@/features/auth/context/useAuth.ts'
+import { safeDestination } from '@/app/router/access.ts'
 
 export type AccountPageMode = 'login' | 'forgot' | 'change'
+
+function getAutoComplete(name: string, type: string) {
+  if (name === 'username') return 'username'
+  if (type === 'email') return 'email'
+  if (name === 'newPassword' || name === 'confirmPassword')
+    return 'new-password'
+  return 'current-password'
+}
 
 export default function AccountPage({ mode }: { mode: AccountPageMode }) {
   const auth = useAuth()
@@ -26,6 +34,8 @@ export default function AccountPage({ mode }: { mode: AccountPageMode }) {
   }[mode]
 
   const fromState = (location.state as { from?: unknown } | null)?.from
+  const notice =
+    (location.state as { notice?: string } | null)?.notice ?? auth.sessionNotice
 
   if (mode === 'login' && auth.status === 'authenticated')
     return <Navigate replace to={safeDestination(fromState, auth.user)} />
@@ -111,20 +121,20 @@ export default function AccountPage({ mode }: { mode: AccountPageMode }) {
       <h1 id="account-title" className="mt-3 text-2xl">
         {title}
       </h1>
-      {mode === 'login' &&
-        ((location.state as { notice?: string } | null)?.notice ??
-          auth.sessionNotice) === 'expired' && (
-          <p role="alert" className="mt-4">
-            Your session has expired. Please log in again.
-          </p>
-        )}
-      {mode === 'login' &&
-        ((location.state as { notice?: string } | null)?.notice ??
-          auth.sessionNotice) === 'passwordChanged' && (
-          <p role="status" className="mt-4">
-            Password changed successfully. Please log in again.
-          </p>
-        )}
+      {mode === 'login' && (
+        <>
+          {notice === 'expired' && (
+            <p role="alert" className="mt-4">
+              Your session has expired. Please log in again.
+            </p>
+          )}
+          {notice === 'passwordChanged' && (
+            <p role="status" className="mt-4">
+              Password changed successfully. Please log in again.
+            </p>
+          )}
+        </>
+      )}
       <form
         ref={formRef}
         onSubmit={submit}
@@ -145,15 +155,7 @@ export default function AccountPage({ mode }: { mode: AccountPageMode }) {
               maxLength={
                 type === 'password' ? 128 : name === 'username' ? 50 : 254
               }
-              autoComplete={
-                name === 'username'
-                  ? 'username'
-                  : type === 'email'
-                    ? 'email'
-                    : name === 'newPassword' || name === 'confirmPassword'
-                      ? 'new-password'
-                      : 'current-password'
-              }
+              autoComplete={getAutoComplete(name, type)}
               autoCapitalize={name === 'username' ? 'none' : undefined}
               spellCheck={false}
               aria-invalid={Boolean(errors[name])}

@@ -2,10 +2,7 @@ import { expect, it } from 'vitest'
 import { screen, within, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
-import {
-  renderDocumentRoute,
-  documentServer,
-} from '../../../test/documentFeature.tsx'
+import { renderDocumentRoute, documentServer } from '@/test/documentFeature.tsx'
 
 it('pages and combines filters at the API, resets page and switches direction', async () => {
   const user = userEvent.setup()

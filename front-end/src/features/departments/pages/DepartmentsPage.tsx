@@ -4,15 +4,15 @@ import {
   CrudHeader,
   CrudRowActions,
   CrudToolbar,
-} from '../../../shared/components/CrudPageLayout.tsx'
-import { useCrudPage } from '../../../shared/hooks/useCrudPage.ts'
+} from '@/shared/components/CrudPageLayout.tsx'
+import { useCrudPage } from '@/shared/hooks/useCrudPage.ts'
 import {
   buildDepartmentRows,
   departmentApi,
   getForbiddenParentIds,
   type DepartmentItem,
-} from '../api/departmentApi.ts'
-import DepartmentSelect from '../components/DepartmentSelect.tsx'
+} from '@/features/departments/api/departmentApi.ts'
+import DepartmentSelect from '@/features/departments/components/DepartmentSelect.tsx'
 
 const fetchDepartments = (statusFilter: string, signal: AbortSignal) =>
   statusFilter === 'active'

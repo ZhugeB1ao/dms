@@ -1,4 +1,4 @@
-import { backendHttp } from '../../../shared/api/http.ts'
+import { backendHttp } from '@/shared/api/http.ts'
 
 export interface DepartmentItem {
   id: number

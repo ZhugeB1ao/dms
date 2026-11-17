@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
-import type { DocumentItem, OcrStatus } from '../types.ts'
-import { ocrApi } from '../api/ocrApi.ts'
+import type { DocumentItem, OcrStatus } from '@/features/ocr/types.ts'
+import { ocrApi } from '@/features/ocr/api/ocrApi.ts'
 
 export default function OcrPage() {
   const [documents, setDocuments] = useState<DocumentItem[]>([])

@@ -2,10 +2,7 @@ import { expect, it } from 'vitest'
 import { screen, within, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse, delay } from 'msw'
-import {
-  renderAccountRoute,
-  featureServer,
-} from '../../../test/userFeature.tsx'
+import { renderAccountRoute, featureServer } from '@/test/userFeature.tsx'
 
 it('combines filters, resets the current page, and clears filters', async () => {
   const user = userEvent.setup()

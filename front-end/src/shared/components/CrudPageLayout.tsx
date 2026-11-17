@@ -1,14 +1,17 @@
-import Select from './Select.tsx'
+import Select from '@/shared/components/Select.tsx'
 import type { FormEvent, ReactNode, RefObject } from 'react'
-import Button from './Button.tsx'
+import Button from '@/shared/components/Button.tsx'
 import {
   CloseIcon,
   DeactivateIcon,
   EditIcon,
   ReactivateIcon,
   SearchIcon,
-} from './Icons.tsx'
-import { crudFilterClassName, crudRowIconClassName } from './crudStyles.ts'
+} from '@/shared/components/Icons.tsx'
+import {
+  crudFilterClassName,
+  crudRowIconClassName,
+} from '@/shared/components/crudStyles.ts'
 
 export interface CrudHeaderProps {
   title: string

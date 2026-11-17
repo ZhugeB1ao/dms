@@ -1,5 +1,5 @@
-import type { User } from '../../shared/types/domain.ts'
-import type { DocumentSummary } from './types.ts'
+import type { User } from '@/shared/types/domain.ts'
+import type { DocumentSummary } from '@/features/documents/types.ts'
 
 type DocumentScope = Pick<
   DocumentSummary,

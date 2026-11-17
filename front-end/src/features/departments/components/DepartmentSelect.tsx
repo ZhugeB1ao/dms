@@ -1,10 +1,10 @@
-import Select from '../../../shared/components/Select.tsx'
+import Select from '@/shared/components/Select.tsx'
 import { useEffect, useState, type SelectHTMLAttributes } from 'react'
 import {
   buildDepartmentRows,
   departmentApi,
   type DepartmentItem,
-} from '../api/departmentApi.ts'
+} from '@/features/departments/api/departmentApi.ts'
 
 export interface DepartmentSelectProps extends Omit<
   SelectHTMLAttributes<HTMLSelectElement>,
