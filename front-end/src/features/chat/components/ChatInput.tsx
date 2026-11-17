@@ -1,5 +1,5 @@
 import { useState, type KeyboardEvent } from 'react'
-import { SendButton } from './SendButton.tsx'
+import { SendButton } from '@/features/chat/components/SendButton.tsx'
 
 export interface ChatInputProps {
   onSend: (message: string) => void

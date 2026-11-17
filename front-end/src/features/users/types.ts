@@ -1,4 +1,4 @@
-import type { Role } from '../../shared/types/domain.ts'
+import type { Role } from '@/shared/types/domain.ts'
 
 /** Mirrors account-service `AccountResponse`. */
 export interface ManagedAccount {

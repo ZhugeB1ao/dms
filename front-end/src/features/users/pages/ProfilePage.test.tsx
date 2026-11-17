@@ -2,10 +2,7 @@ import { expect, it } from 'vitest'
 import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse, delay } from 'msw'
-import {
-  renderAccountRoute,
-  featureServer,
-} from '../../../test/userFeature.tsx'
+import { renderAccountRoute, featureServer } from '@/test/userFeature.tsx'
 
 it.each(['admin', 'manager', 'employee'])(
   'shows only the authenticated profile for %s',

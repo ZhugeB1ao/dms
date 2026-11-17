@@ -1,6 +1,6 @@
-import type { Message } from '../types.ts'
-import { MessageActions } from './MessageActions.tsx'
-import { useChat } from '../context/useChat.ts'
+import type { Message } from '@/features/chat/types.ts'
+import { MessageActions } from '@/features/chat/components/MessageActions.tsx'
+import { useChat } from '@/features/chat/context/useChat.ts'
 
 export interface AssistantMessageProps {
   message: Message

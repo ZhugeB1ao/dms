@@ -382,9 +382,10 @@ a {
   transition:
     transform var(--duration-sidebar) var(--ease-surface),
     opacity 180ms ease-out,
-    visibility var(--duration-sidebar) allow-discrete;
+    visibility 0s;
 }
 .sidebar--desktop[aria-hidden='true'] {
+  transition-delay: 0s, 0s, var(--duration-sidebar);
   opacity: 0;
   transform: translateX(-100%);
   visibility: hidden;

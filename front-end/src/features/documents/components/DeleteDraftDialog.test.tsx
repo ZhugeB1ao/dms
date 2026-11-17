@@ -2,10 +2,7 @@ import { expect, it } from 'vitest'
 import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
-import {
-  renderDocumentRoute,
-  documentServer,
-} from '../../../test/documentFeature.tsx'
+import { renderDocumentRoute, documentServer } from '@/test/documentFeature.tsx'
 
 it('cancels without deleting, then confirms deletion and returns to the list', async () => {
   await renderDocumentRoute('/documents/1')

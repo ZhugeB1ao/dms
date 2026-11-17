@@ -1,7 +1,7 @@
 import type {
   DocumentDetail,
   StatusHistoryEntry,
-} from '../features/documents/types.ts'
+} from '@/features/documents/types.ts'
 
 const lookup = (id: number, name: string) => ({ id, name, isActive: true })
 function seed(): DocumentDetail[] {

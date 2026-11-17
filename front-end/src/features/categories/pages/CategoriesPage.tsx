@@ -1,4 +1,4 @@
-import Select from '../../../shared/components/Select.tsx'
+import Select from '@/shared/components/Select.tsx'
 import { useCallback, useState } from 'react'
 import {
   ConfirmDeactivateDialog,
@@ -6,14 +6,14 @@ import {
   CrudHeader,
   CrudRowActions,
   CrudToolbar,
-} from '../../../shared/components/CrudPageLayout.tsx'
-import { crudFilterClassName } from '../../../shared/components/crudStyles.ts'
-import { useCrudPage } from '../../../shared/hooks/useCrudPage.ts'
+} from '@/shared/components/CrudPageLayout.tsx'
+import { crudFilterClassName } from '@/shared/components/crudStyles.ts'
+import { useCrudPage } from '@/shared/hooks/useCrudPage.ts'
 import {
   CATEGORY_TYPES,
   categoryApi,
   type CategoryItem,
-} from '../api/categoryApi.ts'
+} from '@/features/categories/api/categoryApi.ts'
 
 export default function CategoriesPage() {
   const [typeFilter, setTypeFilter] = useState('')

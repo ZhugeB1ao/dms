@@ -1,5 +1,5 @@
 import type { ComponentPropsWithRef } from 'react'
-import './Select.css'
+import '@/shared/components/Select.css'
 
 export type SelectProps = ComponentPropsWithRef<'select'>
 

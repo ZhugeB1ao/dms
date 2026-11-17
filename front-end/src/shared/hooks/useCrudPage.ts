@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, useState, type FormEvent } from 'react'
 import axios from 'axios'
-import { getApiErrorMessage } from '../api/http.ts'
+import { getApiErrorMessage } from '@/shared/api/http.ts'
 
 export interface UseCrudPageOptions<T extends { id: number }> {
   fetchList: (statusFilter: string, signal: AbortSignal) => Promise<T[]>

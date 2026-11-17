@@ -1,18 +1,22 @@
-import Select from '../../../shared/components/Select.tsx'
+import Select from '@/shared/components/Select.tsx'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
-import Button from '../../../shared/components/Button.tsx'
-import { useAuth } from '../../auth/context/useAuth.ts'
+import Button from '@/shared/components/Button.tsx'
+import { useAuth } from '@/features/auth/context/useAuth.ts'
 import {
   departmentApi,
   type DepartmentItem,
-} from '../../departments/api/departmentApi.ts'
-import { usersApi } from '../api/usersApi.ts'
-import { userError } from '../api/userErrors.ts'
-import type { AccountWrite, ManagedAccount } from '../types.ts'
-import type { Role } from '../../../shared/types/domain.ts'
-import AccountDialog from './AccountDialog.tsx'
-import FormField from '../../../shared/components/FormField.tsx'
-import { validateForm, focusError, errorAttributes } from './formValidation.ts'
+} from '@/features/departments/api/departmentApi.ts'
+import { usersApi } from '@/features/users/api/usersApi.ts'
+import { userError } from '@/features/users/api/userErrors.ts'
+import type { AccountWrite, ManagedAccount } from '@/features/users/types.ts'
+import type { Role } from '@/shared/types/domain.ts'
+import AccountDialog from '@/features/users/components/AccountDialog.tsx'
+import FormField from '@/shared/components/FormField.tsx'
+import {
+  validateForm,
+  focusError,
+  errorAttributes,
+} from '@/features/users/components/formValidation.ts'
 
 export default function UserFormDialog({
   account,

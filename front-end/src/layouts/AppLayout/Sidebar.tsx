@@ -1,16 +1,19 @@
-import Button from '../../shared/components/Button.tsx'
-import { CloseIcon } from '../../shared/components/Icons.tsx'
+import type { Ref } from 'react'
+import Button from '@/shared/components/Button.tsx'
+import { CloseIcon, PanelIcon } from '@/shared/components/Icons.tsx'
 import { NavLink } from 'react-router'
-import { useAuth } from '../../features/auth/context/useAuth.ts'
-import { routes, canAccess } from '../../app/router/access.ts'
+import { useAuth } from '@/features/auth/context/useAuth.ts'
+import { routes, canAccess } from '@/app/router/access.ts'
 
 export interface SidebarProps {
+  closeRef?: Ref<HTMLButtonElement>
   mobile?: boolean
   onClose?: () => void
   collapsed?: boolean
 }
 
 export default function Sidebar({
+  closeRef,
   mobile = false,
   onClose,
   collapsed = false,
@@ -49,18 +52,25 @@ export default function Sidebar({
         <span className="brand" translate="no">
           App
         </span>
-        {mobile ? (
-          <Button variant="icon" aria-label="Close sidebar" onClick={onClose}>
-            <CloseIcon />
+        {onClose && (
+          <Button
+            ref={closeRef}
+            variant="icon"
+            aria-label="Close sidebar"
+            aria-controls={mobile ? 'sidebar-dialog' : 'desktop-sidebar'}
+            aria-expanded={mobile ? undefined : !collapsed}
+            onClick={onClose}
+          >
+            {mobile ? <CloseIcon /> : <PanelIcon />}
           </Button>
-        ) : null}
+        )}
       </div>
       {user ? (
         <nav aria-label="Navigation" className="flex flex-col gap-1 px-3 py-4">
           {routes
             .filter(
               (route) =>
-                route.path !== '/profile' && canAccess(user, route.roles),
+                route.showInSidebar !== false && canAccess(user, route.roles),
             )
             .map((route) => (
               <NavLink

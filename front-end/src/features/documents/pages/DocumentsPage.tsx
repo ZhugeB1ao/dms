@@ -1,29 +1,29 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
-import { useAuth } from '../../auth/context/useAuth.ts'
-import { categoryApi } from '../../categories/api/categoryApi.ts'
-import { departmentApi } from '../../departments/api/departmentApi.ts'
+import { useAuth } from '@/features/auth/context/useAuth.ts'
+import { categoryApi } from '@/features/categories/api/categoryApi.ts'
+import { departmentApi } from '@/features/departments/api/departmentApi.ts'
 import {
   CrudHeader,
   CrudPagination,
   CrudToolbar,
-} from '../../../shared/components/CrudPageLayout.tsx'
-import Button from '../../../shared/components/Button.tsx'
-import Select from '../../../shared/components/Select.tsx'
-import { crudFilterClassName } from '../../../shared/components/crudStyles.ts'
-import { useFetch } from '../../../shared/hooks/useFetch.ts'
-import { documentsApi } from '../api/documentsApi.ts'
-import { documentError } from '../api/documentErrors.ts'
-import { canEditDraft } from '../permissions.ts'
+} from '@/shared/components/CrudPageLayout.tsx'
+import Button from '@/shared/components/Button.tsx'
+import Select from '@/shared/components/Select.tsx'
+import { crudFilterClassName } from '@/shared/components/crudStyles.ts'
+import { useFetch } from '@/shared/hooks/useFetch.ts'
+import { documentsApi } from '@/features/documents/api/documentsApi.ts'
+import { documentError } from '@/features/documents/api/documentErrors.ts'
+import { canEditDraft } from '@/features/documents/permissions.ts'
 import {
   documentDirections,
   documentStatuses,
   type DocumentDetail,
   type DocumentDirection,
-} from '../types.ts'
-import DocumentsTable from '../components/DocumentsTable.tsx'
-import DocumentFormDialog from '../components/DocumentFormDialog.tsx'
-import DeleteDraftDialog from '../components/DeleteDraftDialog.tsx'
+} from '@/features/documents/types.ts'
+import DocumentsTable from '@/features/documents/components/DocumentsTable.tsx'
+import DocumentFormDialog from '@/features/documents/components/DocumentFormDialog.tsx'
+import DeleteDraftDialog from '@/features/documents/components/DeleteDraftDialog.tsx'
 
 const loadFilterOptions = (signal: AbortSignal) =>
   Promise.all([

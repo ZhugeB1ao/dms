@@ -1,7 +1,7 @@
 import { expect, it } from 'vitest'
 import { screen, within, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { renderAccountRoute } from '../../../test/userFeature.tsx'
+import { renderAccountRoute } from '@/test/userFeature.tsx'
 
 it('creates an account and keeps the form input after a duplicate email conflict', async () => {
   const user = userEvent.setup()

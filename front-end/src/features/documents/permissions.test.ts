@@ -1,6 +1,10 @@
 import { expect, it } from 'vitest'
-import { canViewDocument, canEditDraft, canDeleteDraft } from './permissions.ts'
-import type { User } from '../../shared/types/domain.ts'
+import {
+  canViewDocument,
+  canEditDraft,
+  canDeleteDraft,
+} from '@/features/documents/permissions.ts'
+import type { User } from '@/shared/types/domain.ts'
 
 const doc = { departmentId: 2, createdBy: 3, assigneeIds: [4], status: 'DRAFT' }
 it.each([

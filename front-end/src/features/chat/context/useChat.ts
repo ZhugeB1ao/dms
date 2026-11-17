@@ -4,7 +4,7 @@ import type {
   Message,
   SidePanelTab,
   SourceCitation,
-} from '../types.ts'
+} from '@/features/chat/types.ts'
 
 export interface ChatContextValue {
   sidePanelTab: SidePanelTab

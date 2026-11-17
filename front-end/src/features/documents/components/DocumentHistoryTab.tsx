@@ -1,9 +1,9 @@
 import { useCallback } from 'react'
-import Button from '../../../shared/components/Button.tsx'
-import { useFetch } from '../../../shared/hooks/useFetch.ts'
-import { documentsApi } from '../api/documentsApi.ts'
-import { documentError } from '../api/documentErrors.ts'
-import { documentStatuses } from '../types.ts'
+import Button from '@/shared/components/Button.tsx'
+import { useFetch } from '@/shared/hooks/useFetch.ts'
+import { documentsApi } from '@/features/documents/api/documentsApi.ts'
+import { documentError } from '@/features/documents/api/documentErrors.ts'
+import { documentStatuses } from '@/features/documents/types.ts'
 
 const statusLabel = (status: string) =>
   Object.hasOwn(documentStatuses, status) ? documentStatuses[status] : 'Unknown'

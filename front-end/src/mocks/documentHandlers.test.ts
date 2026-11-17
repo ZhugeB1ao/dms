@@ -1,10 +1,10 @@
 import { afterAll, afterEach, beforeAll, expect, it } from 'vitest'
 import { setupServer } from 'msw/node'
-import { handlers, resetMock } from './handlers.ts'
-import { api, authHttp, session } from '../shared/api/http.ts'
-import { documentsApi } from '../features/documents/api/documentsApi.ts'
-import { categoryApi } from '../features/categories/api/categoryApi.ts'
-import { documentStore } from './documents.ts'
+import { handlers, resetMock } from '@/mocks/handlers.ts'
+import { api, authHttp, session } from '@/shared/api/http.ts'
+import { documentsApi } from '@/features/documents/api/documentsApi.ts'
+import { categoryApi } from '@/features/categories/api/categoryApi.ts'
+import { documentStore } from '@/mocks/documents.ts'
 
 const server = setupServer(...handlers)
 beforeAll(() => server.listen({ onUnhandledFrame: 'error' }))

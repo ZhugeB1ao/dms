@@ -1,7 +1,9 @@
 import { useEffect, useRef, type MouseEvent } from 'react'
-import SignupDemoForm, { type DemoAuthMode } from './SignupDemoForm.tsx'
-import Button from '../../../shared/components/Button.tsx'
-import { CloseIcon } from '../../../shared/components/Icons.tsx'
+import SignupDemoForm, {
+  type DemoAuthMode,
+} from '@/features/auth/components/SignupDemoForm.tsx'
+import Button from '@/shared/components/Button.tsx'
+import { CloseIcon } from '@/shared/components/Icons.tsx'
 
 export interface SignupDemoModalProps {
   open: boolean

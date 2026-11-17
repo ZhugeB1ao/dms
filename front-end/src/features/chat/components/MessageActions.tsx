@@ -4,7 +4,7 @@ import {
   ShareIcon,
   RegenerateIcon,
   MoreDotsIcon,
-} from '../../../shared/components/Icons.tsx'
+} from '@/shared/components/Icons.tsx'
 
 export function MessageActions() {
   return (

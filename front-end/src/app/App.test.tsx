@@ -4,11 +4,11 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter, useLocation, useNavigate } from 'react-router'
 import { setupServer } from 'msw/node'
 import { http, HttpResponse, delay } from 'msw'
-import { handlers, resetMock } from '../mocks/handlers.ts'
-import { session, authHttp } from '../shared/api/http.ts'
-import AuthProvider from '../features/auth/context/AuthProvider.tsx'
-import AppRouter from './router/AppRouter.tsx'
-import { canAccess, safeDestination } from './router/access.ts'
+import { handlers, resetMock } from '@/mocks/handlers.ts'
+import { session, authHttp } from '@/shared/api/http.ts'
+import AuthProvider from '@/features/auth/context/AuthProvider.tsx'
+import AppRouter from '@/app/router/AppRouter.tsx'
+import { canAccess, safeDestination } from '@/app/router/access.ts'
 
 const server = setupServer(...handlers)
 beforeAll(() => server.listen({ onUnhandledFrame: 'error' }))

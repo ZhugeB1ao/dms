@@ -1,7 +1,7 @@
 import { beforeAll, afterAll, afterEach, expect, it } from 'vitest'
 import { setupServer } from 'msw/node'
-import { handlers, resetMock } from './handlers.ts'
-import { api, authHttp, session } from '../shared/api/http.ts'
+import { handlers, resetMock } from '@/mocks/handlers.ts'
+import { api, authHttp, session } from '@/shared/api/http.ts'
 
 const server = setupServer(...handlers)
 beforeAll(() => server.listen({ onUnhandledFrame: 'error' }))

@@ -1,15 +1,15 @@
 import { beforeAll, afterAll, afterEach, expect, it } from 'vitest'
 import { setupServer } from 'msw/node'
-import { handlers, resetMock } from './handlers.ts'
-import { api, authHttp, session } from '../shared/api/http.ts'
-import { authApi } from '../features/auth/api/authApi.ts'
-import type { CategoryItem } from '../features/categories/api/categoryApi.ts'
+import { handlers, resetMock } from '@/mocks/handlers.ts'
+import { api, authHttp, session } from '@/shared/api/http.ts'
+import { authApi } from '@/features/auth/api/authApi.ts'
+import type { CategoryItem } from '@/features/categories/api/categoryApi.ts'
 import {
   buildDepartmentRows,
   getForbiddenParentIds,
   type DepartmentItem,
-} from '../features/departments/api/departmentApi.ts'
-import type { OrganizationItem } from '../features/organizations/api/organizationApi.ts'
+} from '@/features/departments/api/departmentApi.ts'
+import type { OrganizationItem } from '@/features/organizations/api/organizationApi.ts'
 
 const server = setupServer(...handlers)
 beforeAll(() => server.listen({ onUnhandledFrame: 'error' }))

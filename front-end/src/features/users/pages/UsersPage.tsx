@@ -1,33 +1,33 @@
-import Select from '../../../shared/components/Select.tsx'
+import Select from '@/shared/components/Select.tsx'
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router'
-import Button from '../../../shared/components/Button.tsx'
-import { useAuth } from '../../auth/context/useAuth.ts'
+import Button from '@/shared/components/Button.tsx'
+import { useAuth } from '@/features/auth/context/useAuth.ts'
 import {
   departmentApi,
   type DepartmentItem,
-} from '../../departments/api/departmentApi.ts'
-import { usersApi } from '../api/usersApi.ts'
-import { userError } from '../api/userErrors.ts'
+} from '@/features/departments/api/departmentApi.ts'
+import { usersApi } from '@/features/users/api/usersApi.ts'
+import { userError } from '@/features/users/api/userErrors.ts'
 import type {
   AccountQuery,
   AccountPageResult,
   ManagedAccount,
   UserAction,
-} from '../types.ts'
-import UserFormDialog from '../components/UserFormDialog.tsx'
-import UserActionDialog from '../components/UserActionDialog.tsx'
+} from '@/features/users/types.ts'
+import UserFormDialog from '@/features/users/components/UserFormDialog.tsx'
+import UserActionDialog from '@/features/users/components/UserActionDialog.tsx'
 import {
   CrudHeader,
   CrudPagination,
   CrudRowActions,
   CrudToolbar,
-} from '../../../shared/components/CrudPageLayout.tsx'
+} from '@/shared/components/CrudPageLayout.tsx'
 import {
   crudFilterClassName,
   crudRowIconClassName,
-} from '../../../shared/components/crudStyles.ts'
-import { KeyIcon } from '../../../shared/components/Icons.tsx'
+} from '@/shared/components/crudStyles.ts'
+import { KeyIcon } from '@/shared/components/Icons.tsx'
 
 const initialQuery: AccountQuery = { page: 0, size: 10 }
 const statusOptions = [

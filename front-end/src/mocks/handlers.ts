@@ -1,16 +1,16 @@
 import { http, HttpResponse, delay } from 'msw'
-import { createDocumentHandlers } from './documentHandlers.ts'
-import { resetDocuments } from './documents.ts'
-import type { Role } from '../shared/types/domain.ts'
+import { createDocumentHandlers } from '@/mocks/documentHandlers.ts'
+import { resetDocuments } from '@/mocks/documents.ts'
+import type { Role } from '@/shared/types/domain.ts'
 import type {
   CategoryItem,
   CategoryTypeCode,
-} from '../features/categories/api/categoryApi.ts'
+} from '@/features/categories/api/categoryApi.ts'
 import {
   getForbiddenParentIds,
   type DepartmentItem,
-} from '../features/departments/api/departmentApi.ts'
-import type { OrganizationItem } from '../features/organizations/api/organizationApi.ts'
+} from '@/features/departments/api/departmentApi.ts'
+import type { OrganizationItem } from '@/features/organizations/api/organizationApi.ts'
 
 const base = '/api'
 const key = 'dms-mock-session-v1'

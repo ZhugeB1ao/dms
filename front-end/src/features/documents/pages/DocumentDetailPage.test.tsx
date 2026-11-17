@@ -1,7 +1,7 @@
 import { expect, it } from 'vitest'
 import { screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { renderDocumentRoute } from '../../../test/documentFeature.tsx'
+import { renderDocumentRoute } from '@/test/documentFeature.tsx'
 
 it('loads a deep link, navigates tabs by keyboard and keeps published documents read-only', async () => {
   await renderDocumentRoute('/documents/3')

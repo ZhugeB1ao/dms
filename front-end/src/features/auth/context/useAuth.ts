@@ -1,5 +1,5 @@
 import { createContext, useContext } from 'react'
-import type { User } from '../../../shared/types/domain.ts'
+import type { User } from '@/shared/types/domain.ts'
 
 export type AuthStatus =
   'loading' | 'authenticated' | 'unauthenticated' | 'error'

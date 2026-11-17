@@ -1,6 +1,6 @@
 import { act, renderHook, waitFor } from '@testing-library/react'
 import { expect, it } from 'vitest'
-import { useFetch } from './useFetch.ts'
+import { useFetch } from '@/shared/hooks/useFetch.ts'
 
 it('loads, retries after an error and ignores responses for an old loader', async () => {
   let calls = 0

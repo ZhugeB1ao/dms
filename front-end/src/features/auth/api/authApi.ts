@@ -1,5 +1,5 @@
-import { api, authHttp } from '../../../shared/api/http.ts'
-import type { Role, User } from '../../../shared/types/domain.ts'
+import { api, authHttp } from '@/shared/api/http.ts'
+import type { Role, User } from '@/shared/types/domain.ts'
 
 export interface RawUser {
   id: string | number
