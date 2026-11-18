@@ -1,17 +1,3 @@
-# ==============================================================================
-# DMS - STAGING CHE DO CD: KEO IMAGE TU GHCR (khong build tren may)
-#
-# Image do GitHub Actions (ci.yml cua DO-2) build va day len GHCR moi khi merge vao main.
-# Script staging-update.sh (cung thu muc) se chay dinh ky:
-#   docker compose -f docker-compose.yml --env-file .env.staging pull
-#   docker compose -f docker-compose.yml --env-file .env.staging up -d
-#
-# - Cung "name: dms-staging" voi file build tai cho => dung lai volume MinIO, KHONG mat tep.
-# - Database tren Neon: volume postgres_data cu (neu co) khong con dung nhung KHONG bi xoa.
-# - IMAGE_TAG mac dinh "latest"; muon quay lai ban cu thi dat IMAGE_TAG=sha-xxxxxxx trong .env.staging.
-# - CI hien chi build linux/amd64; Mac chip Apple chay qua Rosetta (bat trong Docker Desktop).
-# ==============================================================================
-
 name: dms-staging
 
 x-app: &app
