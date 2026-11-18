@@ -94,7 +94,41 @@ Neon tạo branch gần như tức thì, có sẵn bản sao dữ liệu của b
 
 Bảng không cần tạo tay: Flyway và Hibernate tự tạo khi service khởi động lần đầu, `account-service` tự seed tài khoản mẫu.
 
-**Thêm service mới cần database:** tạo database (ví dụ `document_db`) trên **từng** branch `dev` và `staging`, rồi thêm `SPRING_DATASOURCE_URL: jdbc:postgresql://${DB_HOST}/document_db?sslmode=require` cho service đó trong `docker-compose.yml`, `deploy/staging/docker-compose.yml` và `start-dev.sh`.
+**Thêm service mới cần database** (ví dụ `document_db`): làm trên **từng** branch `dev` và `staging`.
+
+1. Vào Neon bằng một thành viên đã có role (ví dụ `baohuy`). Chọn một trong hai cách:
+   - **SQL Editor** trong Neon Console: chọn branch, chọn database `neondb`.
+   - **psql qua Docker** (không cần cài `psql`), host lấy từ `DB_HOST` của branch tương ứng, nhập mật khẩu khi được hỏi:
+
+     ```bash
+     docker run --rm -it postgres:18 psql "postgresql://<role>@<DB_HOST>/neondb?sslmode=require"
+     ```
+
+2. Tạo database với owner là nhóm chung:
+
+   ```sql
+   CREATE DATABASE document_db OWNER dms_owner;
+   \q
+   ```
+
+3. Báo admin để admin gán cho từng thành viên tự chuyển sang `dms_owner` khi kết nối vào database này (thành viên chỉ làm front-end, không kết nối database, thì không cần):
+
+   ```sql
+   ALTER ROLE quocviet IN DATABASE document_db SET role = 'dms_owner';
+   ALTER ROLE baohuy   IN DATABASE document_db SET role = 'dms_owner';
+   ALTER ROLE giabao   IN DATABASE document_db SET role = 'dms_owner';
+   ALTER ROLE kimanh   IN DATABASE document_db SET role = 'dms_owner';
+   ```
+
+4. Riêng branch `staging`, role của ứng dụng là `dms_app`:
+
+   ```sql
+   CREATE DATABASE document_db OWNER dms_owner;
+   ALTER ROLE dms_app IN DATABASE document_db SET role = 'dms_owner';
+   ```
+
+5. Thêm `document_db` vào danh sách database trong [scripts/neon/fix-ownership.sql](scripts/neon/fix-ownership.sql), để lần chạy sau script cũng xử lý database mới.
+6. Thêm `SPRING_DATASOURCE_URL: jdbc:postgresql://${DB_HOST}/document_db?sslmode=require` cho service đó trong `docker-compose.yml`, `deploy/staging/docker-compose.yml` và `start-dev.sh`.
 
 **Thêm thành viên (mỗi người một role):** Neon đang dùng nhóm `dms_owner` (sở hữu 5 database) và mỗi thành viên một role (`baohuy`, `giabao`, `quocviet`, `kimanh`).
 
