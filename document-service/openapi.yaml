@@ -1,0 +1,310 @@
+openapi: 3.1.0
+info:
+  title: Document Service API
+  description: "Quản lý văn bản (đến, đi, nội bộ). Gọi qua api-gateway với Bearer\
+    \ token."
+  version: "1.0"
+servers:
+- url: http://localhost:9090
+  description: api-gateway
+security:
+- bearerAuth: []
+tags:
+- name: Documents
+  description: "Văn bản đến, đi, nội bộ. Mọi API cần đăng nhập (401). Văn bản khô\
+    ng thuộc quyền xem của người gọi trả 404."
+paths:
+  /api/documents/{id}:
+    get:
+      tags:
+      - Documents
+      summary: Chi tiết văn bản
+      operationId: get
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "404":
+          description: "Không có văn bản, đã xóa, hoặc người gọi không được xem"
+    put:
+      tags:
+      - Documents
+      summary: "Sửa bản thảo (thay toàn bộ các trường). Chỉ owner, và chỉ khi còn\
+        \ là DRAFT"
+      operationId: update
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DocumentRequest"
+        required: true
+      responses:
+        "400":
+          description: Như tạo bản thảo
+        "403":
+          description: Xem được nhưng không phải owner
+        "404":
+          description: Không có văn bản hoặc không được xem
+        "409":
+          description: Đã hoàn thành chờ công bố hoặc đã công bố
+    delete:
+      tags:
+      - Documents
+      summary: "Xóa mềm bản thảo (đặt deleted_at). Chỉ owner, và chỉ khi còn là DRAFT"
+      operationId: delete
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "403":
+          description: Xem được nhưng không phải owner
+        "404":
+          description: Không có văn bản hoặc không được xem
+        "409":
+          description: Đã hoàn thành chờ công bố hoặc đã công bố
+        "204":
+          description: No Content
+  /api/documents:
+    get:
+      tags:
+      - Documents
+      summary: "Danh sách văn bản (phân trang, mới nhất trước), lọc theo hướng / trạ\
+        ng thái / loại văn bản / đơn vị; chỉ gồm văn bản người gọi được xem"
+      operationId: list
+      parameters:
+      - name: direction
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - INCOMING
+          - OUTGOING
+          - INTERNAL
+      - name: status
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - DRAFT
+          - PENDING_PUBLICATION
+          - PUBLISHED
+      - name: docTypeId
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int64
+      - name: departmentId
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int64
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 0
+          minimum: 0
+      - name: size
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 20
+          maximum: 100
+          minimum: 1
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/PageResponseDocumentResponse"
+    post:
+      tags:
+      - Documents
+      summary: "Tạo bản thảo (status DRAFT). Owner và đơn vị lấy từ người gọi; loạ\
+        i văn bản, độ khẩn, độ mật phải là danh mục đang hoạt động"
+      operationId: create
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DocumentRequest"
+        required: true
+      responses:
+        "400":
+          description: "Danh mục không tồn tại hoặc ngưng hoạt động, hồ sơ không tồ\
+            n tại, hoặc cột công văn đến dùng cho văn bản không phải INCOMING"
+        "503":
+          description: Không gọi được category-service
+        "201":
+          description: Created
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/DocumentResponse"
+  /api/documents/{id}/history:
+    get:
+      tags:
+      - Documents
+      summary: "Lịch sử thay đổi của văn bản (cũ nhất trước): hành động, trạng thá\
+        i trước/sau, người thực hiện, thời điểm"
+      operationId: history
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "404":
+          description: Không có văn bản hoặc không được xem
+components:
+  schemas:
+    DocumentRequest:
+      type: object
+      properties:
+        direction:
+          type: string
+          enum:
+          - INCOMING
+          - OUTGOING
+          - INTERNAL
+        docTypeId:
+          type: integer
+          format: int64
+        summary:
+          type: string
+          maxLength: 2000
+          minLength: 0
+        urgencyId:
+          type: integer
+          format: int64
+        confidentialityId:
+          type: integer
+          format: int64
+        dossierId:
+          type: integer
+          format: int64
+        incomingNumber:
+          type: string
+          maxLength: 100
+          minLength: 0
+        receivedDate:
+          type: string
+          format: date
+        sender:
+          type: string
+          maxLength: 255
+          minLength: 0
+      required:
+      - confidentialityId
+      - direction
+      - docTypeId
+      - summary
+      - urgencyId
+    DocumentResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        direction:
+          type: string
+          enum:
+          - INCOMING
+          - OUTGOING
+          - INTERNAL
+        docNumber:
+          type: string
+        docTypeId:
+          type: integer
+          format: int64
+        summary:
+          type: string
+        urgencyId:
+          type: integer
+          format: int64
+        confidentialityId:
+          type: integer
+          format: int64
+        departmentId:
+          type: integer
+          format: int64
+        ownerId:
+          type: integer
+          format: int64
+        dossierId:
+          type: integer
+          format: int64
+        status:
+          type: string
+          enum:
+          - DRAFT
+          - PENDING_PUBLICATION
+          - PUBLISHED
+        currentApproverId:
+          type: integer
+          format: int64
+        issueDate:
+          type: string
+          format: date
+        revoked:
+          type: boolean
+        incomingNumber:
+          type: string
+        receivedDate:
+          type: string
+          format: date
+        sender:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+    PageResponseDocumentResponse:
+      type: object
+      properties:
+        content:
+          type: array
+          items:
+            $ref: "#/components/schemas/DocumentResponse"
+        page:
+          type: integer
+          format: int32
+        size:
+          type: integer
+          format: int32
+        totalElements:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
+          format: int32
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
