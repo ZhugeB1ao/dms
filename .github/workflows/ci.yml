@@ -25,6 +25,7 @@ jobs:
           - category-service
           - department-service
           - organization-service
+          - document-service
           - api-gateway
     defaults:
       run:
@@ -97,6 +98,8 @@ jobs:
             context: department-service
           - image: organization-service
             context: organization-service
+          - image: document-service
+            context: document-service
           - image: api-gateway
             context: api-gateway
           - image: front-end
