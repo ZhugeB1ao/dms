@@ -44,6 +44,7 @@ class DocumentApiIntegrationTest {
     @BeforeEach
     void reset() {
         when(catalog.isActive(any(), anyLong())).thenReturn(true);
+        jdbc.update("delete from attachments");
         histories.deleteAll();
         documents.deleteAll();
         jdbc.update("delete from dossiers");

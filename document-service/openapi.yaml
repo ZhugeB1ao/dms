@@ -13,6 +13,8 @@ tags:
 - name: Documents
   description: "Văn bản đến, đi, nội bộ. Mọi API cần đăng nhập (401). Văn bản khô\
     ng thuộc quyền xem của người gọi trả 404."
+- name: Attachments
+  description: "Tệp đính kèm văn bản trên MinIO. Upload/thay thế/xóa chỉ áp dụng cho owner khi văn bản còn DRAFT."
 paths:
   /api/documents/{id}:
     get:
@@ -182,8 +184,270 @@ paths:
       responses:
         "404":
           description: Không có văn bản hoặc không được xem
+  /api/documents/{documentId}/attachments:
+    get:
+      tags:
+      - Attachments
+      summary: Danh sách tệp đính kèm của văn bản (mặc định chỉ lấy phiên bản hiện hành)
+      operationId: listAttachments
+      parameters:
+      - name: documentId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      - name: includeHistory
+        in: query
+        required: false
+        schema:
+          type: boolean
+          default: false
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AttachmentResponse"
+        "404":
+          description: Không có văn bản hoặc không được xem
+    post:
+      tags:
+      - Attachments
+      summary: Tải lên tệp đính kèm mới (PDF, PNG, JPEG, WEBP, DOCX, XLSX)
+      operationId: uploadAttachment
+      parameters:
+      - name: documentId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+              - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        "201":
+          description: Created
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/AttachmentResponse"
+        "400":
+          description: Tệp rỗng hoặc tên tệp không hợp lệ
+        "403":
+          description: Không phải owner
+        "404":
+          description: Không có văn bản hoặc không được xem
+        "409":
+          description: Văn bản không còn ở trạng thái DRAFT
+        "413":
+          description: Dung lượng vượt quá giới hạn
+        "415":
+          description: Định dạng hoặc nội dung tệp không được hỗ trợ
+  /api/documents/{documentId}/attachments/{attachmentId}/versions:
+    get:
+      tags:
+      - Attachments
+      summary: Danh sách tất cả phiên bản cùng nhóm tệp đính kèm (mới nhất trước)
+      operationId: versions
+      parameters:
+      - name: documentId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      - name: attachmentId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AttachmentResponse"
+        "404":
+          description: Không có văn bản, không có tệp đính kèm, hoặc không được xem
+  /api/documents/{documentId}/attachments/{attachmentId}/replace:
+    post:
+      tags:
+      - Attachments
+      summary: Thay thế tệp đính kèm bằng phiên bản mới (tăng versionNo, giữ lịch sử phiên bản cũ)
+      operationId: replace
+      parameters:
+      - name: documentId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      - name: attachmentId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+              - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        "201":
+          description: Created
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/AttachmentResponse"
+        "400":
+          description: Tệp rỗng hoặc tên tệp không hợp lệ
+        "403":
+          description: Không phải owner
+        "404":
+          description: Không có văn bản, không có tệp, hoặc không được xem
+        "409":
+          description: Không còn DRAFT hoặc xung đột phiên bản đồng thời
+        "413":
+          description: Dung lượng vượt quá giới hạn
+        "415":
+          description: Định dạng hoặc nội dung tệp không được hỗ trợ
+  /api/documents/{documentId}/attachments/{attachmentId}:
+    delete:
+      tags:
+      - Attachments
+      summary: Xóa tệp đính kèm (xóa toàn bộ các phiên bản trong nhóm)
+      operationId: deleteAttachment
+      parameters:
+      - name: documentId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      - name: attachmentId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "204":
+          description: No Content
+        "403":
+          description: Không phải owner
+        "404":
+          description: Không có văn bản, không có tệp, hoặc không được xem
+        "409":
+          description: Văn bản không còn ở trạng thái DRAFT
+  /api/documents/{documentId}/attachments/{attachmentId}/url:
+    get:
+      tags:
+      - Attachments
+      summary: Tạo presigned GET URL ngắn hạn để xem trước (inline) hoặc tải xuống (attachment)
+      operationId: presignUrl
+      parameters:
+      - name: documentId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      - name: attachmentId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      - name: disposition
+        in: query
+        required: false
+        schema:
+          type: string
+          default: inline
+          enum:
+          - inline
+          - attachment
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/PresignedUrlResponse"
+        "400":
+          description: Tham số disposition không hợp lệ
+        "404":
+          description: Không có văn bản, không có tệp, hoặc không được xem
 components:
   schemas:
+    AttachmentResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        documentId:
+          type: integer
+          format: int64
+        fileGroupId:
+          type: string
+        fileName:
+          type: string
+        mimeType:
+          type: string
+        fileSize:
+          type: integer
+          format: int64
+        versionNo:
+          type: integer
+          format: int32
+        isCurrent:
+          type: boolean
+        uploadedBy:
+          type: integer
+          format: int64
+        uploadedAt:
+          type: string
+          format: date-time
+    PresignedUrlResponse:
+      type: object
+      properties:
+        url:
+          type: string
+        expiresAt:
+          type: string
+          format: date-time
+        expiresInSeconds:
+          type: integer
+          format: int32
+        disposition:
+          type: string
     DocumentRequest:
       type: object
       properties:

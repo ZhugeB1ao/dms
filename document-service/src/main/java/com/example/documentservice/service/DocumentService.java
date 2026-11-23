@@ -103,6 +103,14 @@ public class DocumentService {
         return (root, query, cb) -> value == null ? cb.conjunction() : cb.equal(root.get(field), value);
     }
 
+    public Document requireVisible(Caller caller, long id) {
+        return findVisible(caller, id);
+    }
+
+    public Document requireEditableDraft(Caller caller, long id) {
+        return findEditableDraft(caller, id);
+    }
+
     /** Không thấy được thì 404 (không lộ văn bản có tồn tại hay không). */
     private Document findVisible(Caller caller, long id) {
         return documents.findOne(visibleTo(caller).and(equal("id", id)))
