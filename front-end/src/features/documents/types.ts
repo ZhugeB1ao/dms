@@ -70,9 +70,19 @@ export interface StatusHistoryEntry {
 }
 export interface DocumentAttachment {
   id: number
+  documentId: number
+  fileGroupId: string
   fileName: string
-  sizeBytes: number
-  contentType: string
-  uploadedBy: string
+  mimeType: string
+  fileSize: number
+  versionNo: number
+  isCurrent: boolean
+  uploadedBy: number
   uploadedAt: string
+}
+export interface AttachmentSignedUrl {
+  url: string
+  expiresAt: string
+  expiresInSeconds: number
+  disposition: 'inline' | 'attachment'
 }
