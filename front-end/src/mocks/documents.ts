@@ -15,15 +15,17 @@ function seed(): DocumentDetail[] {
       departmentId === 1
         ? 'Board of Directors'
         : 'General Administration Office'
+    const id = i + 1
     return {
-      id: i + 1,
+      id,
       direction,
-      summary: `${direction[0] + direction.slice(1).toLowerCase()} document ${i + 1}`,
+      summary: `${direction[0] + direction.slice(1).toLowerCase()} document ${id}`,
       documentTypeId: 1,
       urgencyId: 4,
       confidentialityId: 7,
       issuingOrganizationId: 1,
       departmentId,
+      dossierId: id === 7 ? 1 : id === 9 ? 2 : null,
       createdBy: i % 2 ? 1 : 3,
       assigneeIds: i % 4 === 0 ? [3] : [],
       status: ['DRAFT', 'READY_TO_PUBLISH', 'PUBLISHED'][i % 3],

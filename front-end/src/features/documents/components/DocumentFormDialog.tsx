@@ -1,4 +1,5 @@
 import {
+  useCallback,
   useEffect,
   useLayoutEffect,
   useRef,
@@ -9,6 +10,8 @@ import { useAuth } from '@/features/auth/context/useAuth.ts'
 import { categoryApi } from '@/features/categories/api/categoryApi.ts'
 import { departmentApi } from '@/features/departments/api/departmentApi.ts'
 import { organizationApi } from '@/features/organizations/api/organizationApi.ts'
+import { dossiersApi } from '@/features/dossiers/api/dossiersApi.ts'
+import type { Dossier } from '@/features/dossiers/types.ts'
 import { CrudFormDialog } from '@/shared/components/CrudPageLayout.tsx'
 import Button from '@/shared/components/Button.tsx'
 import FormField from '@/shared/components/FormField.tsx'
@@ -32,19 +35,17 @@ const selectFields = [
   ['issuingOrganizationId', 'issuingOrganization', 'Issuing organization'],
   ['departmentId', 'department', 'Responsible department'],
 ] as const
-type Options = Record<keyof DocumentDetail['lookups'], Lookup[]>
-const loadOptions = (signal: AbortSignal): Promise<Options> =>
-  Promise.all([
-    categoryApi.listActive(undefined, signal),
-    organizationApi.listActive(signal),
-    departmentApi.listActive(signal),
-  ]).then(([categories, organizations, departments]) => ({
-    documentType: categories.filter((c) => c.type === 'DOC_TYPE'),
-    urgency: categories.filter((c) => c.type === 'URGENCY'),
-    confidentiality: categories.filter((c) => c.type === 'CONFIDENTIALITY'),
-    issuingOrganization: organizations,
-    department: departments,
-  }))
+type DossierOption = {
+  id: number
+  code: string
+  name: string
+  year: number
+  departmentId: number
+  closed: boolean
+}
+type Options = Record<keyof DocumentDetail['lookups'], Lookup[]> & {
+  dossiers: DossierOption[]
+}
 type Props = {
   document: DocumentDetail | null
   direction: DocumentDirection
@@ -65,8 +66,91 @@ export default function DocumentFormDialog({
 }: Props) {
   const { user } = useAuth()
   const [document, setDocument] = useState(initialDocument)
+  const admin = Boolean(user?.roles.includes('ADMIN'))
+  const [selectedDepartmentId, setSelectedDepartmentId] = useState<number | ''>(
+    initialDocument?.departmentId ??
+      (!admin && user?.departmentId ? Number(user.departmentId) : ''),
+  )
+  const [dossierOverrides, setDossierOverrides] = useState<
+    Map<number, DossierOption>
+  >(() => new Map())
+  const initialDossierId = initialDocument?.dossierId ?? null
+  const initialDossierSummary = initialDocument?.dossier ?? null
+  const initialDepartmentId = initialDocument?.departmentId ?? 0
+  const loadOptions = useCallback(
+    async (signal: AbortSignal): Promise<Options> => {
+      const [categories, organizations, departments, openDossiers] =
+        await Promise.all([
+          categoryApi.listActive(undefined, signal),
+          organizationApi.listActive(signal),
+          departmentApi.listActive(signal),
+          admin
+            ? Promise.resolve([] as Dossier[])
+            : dossiersApi
+                .list({ closed: false, page: 0, size: 100 }, signal)
+                .then((p) => p.content)
+                .catch(() => [] as Dossier[]),
+        ])
+      let dossiers: DossierOption[] = openDossiers
+      if (
+        !admin &&
+        initialDossierId &&
+        !openDossiers.some((d) => d.id === initialDossierId)
+      ) {
+        const existing =
+          initialDossierSummary ??
+          (await dossiersApi.get(initialDossierId, signal).catch(() => null))
+        if (existing) {
+          dossiers = [
+            ...openDossiers,
+            {
+              id: existing.id,
+              code: existing.code,
+              name: existing.name,
+              year: existing.year,
+              departmentId:
+                'departmentId' in existing &&
+                typeof existing.departmentId === 'number'
+                  ? existing.departmentId
+                  : initialDepartmentId,
+              closed: existing.closed,
+            },
+          ]
+        }
+      }
+      return {
+        documentType: categories.filter((c) => c.type === 'DOC_TYPE'),
+        urgency: categories.filter((c) => c.type === 'URGENCY'),
+        confidentiality: categories.filter((c) => c.type === 'CONFIDENTIALITY'),
+        issuingOrganization: organizations,
+        department: departments,
+        dossiers,
+      }
+    },
+    [admin, initialDossierId, initialDossierSummary, initialDepartmentId],
+  )
   const lookups = useFetch(loadOptions)
   const options = lookups.data
+  const dossierMap = new Map<number, DossierOption>()
+  for (const d of options?.dossiers ?? []) dossierMap.set(d.id, d)
+  if (document?.dossier) {
+    dossierMap.set(document.dossier.id, {
+      ...document.dossier,
+      departmentId: document.departmentId,
+    })
+  }
+  for (const [id, d] of dossierOverrides) dossierMap.set(id, d)
+  const allDossiers = Array.from(dossierMap.values())
+  const initialDossierClosed = Boolean(
+    document?.dossierId && dossierMap.get(document.dossierId)?.closed,
+  )
+  const matchingDossiers = selectedDepartmentId
+    ? allDossiers.filter((d) => d.departmentId === selectedDepartmentId)
+    : []
+  const unselectableDossier = Boolean(
+    document?.dossierId &&
+    !matchingDossiers.some((d) => d.id === document.dossierId),
+  )
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<ReturnType<typeof documentError> | null>(
     null,
@@ -74,7 +158,6 @@ export default function DocumentFormDialog({
   const [fields, setFields] = useState<Record<string, string>>({})
   const modalRef = useRef<HTMLDialogElement>(null)
   const pending = useRef<AbortController | null>(null)
-  const admin = user?.roles.includes('ADMIN')
   // 404/409 only mean "stale version" when editing; a create has nothing to reload.
   const stale =
     Boolean(document) && (error?.status === 409 || error?.status === 404)
@@ -126,6 +209,8 @@ export default function DocumentFormDialog({
     if (Object.keys(errors).length) {
       return
     }
+    const rawDossier = data.get('dossierId')
+    const preserveDossier = admin || initialDossierClosed || unselectableDossier
     const input: DraftInput = {
       direction: document?.direction ?? direction,
       summary,
@@ -136,6 +221,11 @@ export default function DocumentFormDialog({
       departmentId: admin
         ? Number(data.get('departmentId'))
         : (document?.departmentId ?? Number(user?.departmentId)),
+      dossierId: preserveDossier
+        ? (document?.dossierId ?? null)
+        : rawDossier
+          ? Number(rawDossier)
+          : null,
     }
     const controller = new AbortController()
     pending.current = controller
@@ -171,8 +261,34 @@ export default function DocumentFormDialog({
     setSubmitting(true)
     try {
       const fresh = await documentsApi.get(document.id, controller.signal)
+      const refreshedDossier =
+        fresh.dossierId && !admin
+          ? (fresh.dossier ??
+            (await dossiersApi
+              .get(fresh.dossierId, controller.signal)
+              .catch(() => null)))
+          : (fresh.dossier ?? null)
       if (!controller.signal.aborted) {
+        if (refreshedDossier) {
+          setDossierOverrides((prev) => {
+            const next = new Map(prev)
+            next.set(refreshedDossier.id, {
+              id: refreshedDossier.id,
+              code: refreshedDossier.code,
+              name: refreshedDossier.name,
+              year: refreshedDossier.year,
+              departmentId:
+                'departmentId' in refreshedDossier &&
+                typeof refreshedDossier.departmentId === 'number'
+                  ? refreshedDossier.departmentId
+                  : fresh.departmentId,
+              closed: refreshedDossier.closed,
+            })
+            return next
+          })
+        }
         setDocument(fresh)
+        setSelectedDepartmentId(fresh.departmentId)
         onReloaded(fresh)
         setFields({})
         setError(null)
@@ -196,7 +312,7 @@ export default function DocumentFormDialog({
       modalRef={modalRef}
       titleId="document-form-title"
       title={document ? 'Edit draft' : 'Create draft'}
-      formKey={`${document?.id ?? 'new'}-${document?.version ?? 0}`}
+      formKey={`${document?.id ?? 'new'}-${document?.version ?? 0}-${initialDossierClosed ? 'closed' : 'open'}`}
       modalMessage={error?.message}
       submitting={submitting}
       submitDisabled={unavailable || stale}
@@ -267,6 +383,14 @@ export default function DocumentFormDialog({
                     document?.[field] ??
                     (department ? (user?.departmentId ?? '') : '')
                   }
+                  onChange={
+                    field === 'departmentId'
+                      ? (e) =>
+                          setSelectedDepartmentId(
+                            e.target.value ? Number(e.target.value) : '',
+                          )
+                      : undefined
+                  }
                   aria-invalid={Boolean(fields[field])}
                   aria-describedby={
                     fields[field] ? `${field}-error` : undefined
@@ -283,6 +407,41 @@ export default function DocumentFormDialog({
               </FormField>
             )
           })}
+          {admin || unselectableDossier ? (
+            document?.dossierId ? (
+              <div className="user-field">
+                <span className="field-label">Record</span>
+                <p className="text-sm text-neutral-300">
+                  {document.dossier
+                    ? `${document.dossier.code} — ${document.dossier.name} (${document.dossier.year})${document.dossier.closed ? ' (closed)' : ''}`
+                    : `Record #${document.dossierId}`}
+                </p>
+              </div>
+            ) : null
+          ) : (
+            <FormField name="dossierId" label="Record" error={fields.dossierId}>
+              <Select
+                id="dossierId"
+                name="dossierId"
+                disabled={initialDossierClosed}
+                defaultValue={
+                  document?.dossierId ? String(document.dossierId) : ''
+                }
+                aria-invalid={Boolean(fields.dossierId)}
+                aria-describedby={
+                  fields.dossierId ? 'dossierId-error' : undefined
+                }
+              >
+                <option value="">None</option>
+                {matchingDossiers.map((dossier) => (
+                  <option key={dossier.id} value={dossier.id}>
+                    {dossier.code} — {dossier.name} ({dossier.year})
+                    {dossier.closed ? ' (closed)' : ''}
+                  </option>
+                ))}
+              </Select>
+            </FormField>
+          )}
         </fieldset>
       )}
       {document && error?.status === 409 && (

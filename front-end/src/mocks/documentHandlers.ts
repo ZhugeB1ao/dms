@@ -12,6 +12,7 @@ import {
   resolveAttachmentMime,
 } from '@/features/documents/api/attachmentsApi.ts'
 import { documentStore } from '@/mocks/documents.ts'
+import { dossierStore } from '@/mocks/dossierHandlers.ts'
 
 const SAMPLE_PDF_DATA_URL =
   'data:application/pdf;base64,JVBERi0xLjQKMSAwIG9iajw8Pj5lbmRvYmoKdHJhaWxlcjw8Pj4KJSVFT0Y='
@@ -52,6 +53,25 @@ const visible = (u: Actor, d: DocumentDetail) =>
     (u.id === d.createdBy || d.assigneeIds.includes(u.id)))
 const editable = (u: Actor, d: DocumentDetail) =>
   visible(u, d) && (u.role !== 'EMPLOYEE' || u.id === d.createdBy)
+
+function withDossier(doc: DocumentDetail): DocumentDetail {
+  const dossier = doc.dossierId
+    ? dossierStore.dossiers.find((d) => d.id === doc.dossierId)
+    : undefined
+  return {
+    ...doc,
+    dossierId: doc.dossierId ?? null,
+    dossier: dossier
+      ? {
+          id: dossier.id,
+          code: dossier.code,
+          name: dossier.name,
+          year: dossier.year,
+          closed: dossier.closed,
+        }
+      : null,
+  }
+}
 
 export function createDocumentHandlers(
   base: string,
@@ -140,6 +160,41 @@ export function createDocumentHandlers(
       body.departmentId !== (old?.departmentId ?? user.departmentId)
     )
       return failure(403, 'You cannot change the responsible department.')
+    const rawDossierId = body.dossierId
+    if (
+      rawDossierId !== undefined &&
+      rawDossierId !== null &&
+      (typeof rawDossierId !== 'number' ||
+        !Number.isSafeInteger(rawDossierId) ||
+        rawDossierId <= 0)
+    )
+      return failure(400, 'Selected record is invalid.')
+    const nextDossierId =
+      rawDossierId === undefined || rawDossierId === null ? null : rawDossierId
+    const prevDossierId = old?.dossierId ?? null
+    if (nextDossierId !== prevDossierId && prevDossierId !== null) {
+      const prevDossier = dossierStore.dossiers.find(
+        (d) => d.id === prevDossierId,
+      )
+      if (prevDossier?.closed)
+        return failure(
+          409,
+          'Cannot move or detach a document from a closed record.',
+        )
+    }
+    if (nextDossierId !== null) {
+      const nextDossier = dossierStore.dossiers.find(
+        (d) => d.id === nextDossierId,
+      )
+      if (!nextDossier) return failure(400, 'Selected record does not exist.')
+      if (nextDossier.departmentId !== lookups.department.id)
+        return failure(
+          403,
+          'Selected record belongs to a different department.',
+        )
+      if (nextDossierId !== prevDossierId && nextDossier.closed)
+        return failure(409, 'Cannot attach document to a closed record.')
+    }
     return {
       direction: body.direction as DraftInput['direction'],
       summary,
@@ -148,6 +203,7 @@ export function createDocumentHandlers(
       confidentialityId: lookups.confidentiality.id,
       issuingOrganizationId: lookups.issuingOrganization.id,
       departmentId: lookups.department.id,
+      dossierId: nextDossierId,
       documentTypeName: lookups.documentType.name,
       issuingOrganizationName: lookups.issuingOrganization.name,
       departmentName: lookups.department.name,
@@ -215,7 +271,7 @@ export function createDocumentHandlers(
           ? { id: current.id, name: current.name, isActive: current.isActive }
           : { ...lookups[key], isActive: false }
       }
-      return HttpResponse.json({ ...checked.doc, lookups })
+      return HttpResponse.json(withDossier({ ...checked.doc, lookups }))
     }),
     http.post(`${base}/documents`, async ({ request }) => {
       const user = getUser(request)
@@ -248,7 +304,7 @@ export function createDocumentHandlers(
           occurredAt: now,
         },
       ])
-      return HttpResponse.json(doc, { status: 201 })
+      return HttpResponse.json(withDossier(doc), { status: 201 })
     }),
     http.put(`${base}/documents/:id`, async ({ request, params }) => {
       const checked = authorize(request, String(params.id))
@@ -270,7 +326,7 @@ export function createDocumentHandlers(
         version: doc.version + 1,
         updatedAt: new Date().toISOString(),
       })
-      return HttpResponse.json(doc)
+      return HttpResponse.json(withDossier(doc))
     }),
     http.delete(`${base}/documents/:id`, ({ request, params }) => {
       const checked = authorize(request, String(params.id))

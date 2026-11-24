@@ -22,6 +22,7 @@ export interface DraftInput {
   confidentialityId: number
   issuingOrganizationId: number
   departmentId: number
+  dossierId?: number | null
 }
 export interface DocumentSummary extends DraftInput {
   id: number
@@ -36,6 +37,13 @@ export interface DocumentSummary extends DraftInput {
 }
 export interface DocumentDetail extends DocumentSummary {
   version: number
+  dossier?: {
+    id: number
+    code: string
+    name: string
+    year: number
+    closed: boolean
+  } | null
   lookups: Record<
     | 'documentType'
     | 'urgency'

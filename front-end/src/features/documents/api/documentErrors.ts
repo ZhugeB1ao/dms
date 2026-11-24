@@ -1,7 +1,10 @@
 export function documentError(error: unknown) {
   const response = (
     error as {
-      response?: { status?: number; data?: { fieldErrors?: unknown } }
+      response?: {
+        status?: number
+        data?: { message?: unknown; fieldErrors?: unknown }
+      }
     }
   )?.response
   const status = response?.status
@@ -24,10 +27,18 @@ export function documentError(error: unknown) {
           ),
         )
       : {}
+  const serverMessage =
+    typeof response?.data?.message === 'string'
+      ? response.data.message.trim()
+      : ''
+  const useServerMessage =
+    Boolean(serverMessage) &&
+    (status === 400 || status === 403 || status === 409 || status === 422)
   return {
     status,
-    message:
-      messages[status ?? 0] ?? 'Unable to complete the request. Try again.',
+    message: useServerMessage
+      ? serverMessage
+      : (messages[status ?? 0] ?? 'Unable to complete the request. Try again.'),
     fields,
   }
 }
