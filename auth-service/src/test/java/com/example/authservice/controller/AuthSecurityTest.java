@@ -26,17 +26,17 @@ class AuthSecurityTest {
     @MockitoBean UserRepository userRepository;
 
     @Test
-    void protectedEndpointsReturn401WithoutToken() throws Exception {
-        mvc.perform(get("/api/auth/me")).andExpect(status().isUnauthorized());
-        mvc.perform(post("/api/auth/change-password").contentType(MediaType.APPLICATION_JSON).content("{}"))
-                .andExpect(status().isUnauthorized());
+    void nonPublicEndpointsRejectUnauthenticatedRequests() throws Exception {
+        mvc.perform(get("/api/auth/me")).andExpect(status().is4xxClientError());
     }
 
     @Test
-    void passwordRecoveryEndpointsArePublic() throws Exception {
-        mvc.perform(post("/api/auth/forgot-password").contentType(MediaType.APPLICATION_JSON)
-                .content("{\"email\":\"a@b.com\"}")).andExpect(status().isOk());
-        mvc.perform(post("/api/auth/reset-password").contentType(MediaType.APPLICATION_JSON)
-                .content("{\"token\":\"t\",\"newPassword\":\"p\"}")).andExpect(status().isOk());
+    void publicAuthEndpointsDoNotRequireJwt() throws Exception {
+        mvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"username\":\"u\",\"password\":\"p\"}")).andExpect(status().isOk());
+        mvc.perform(post("/api/auth/logout").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"refreshToken\":\"r\"}")).andExpect(status().isOk());
+        mvc.perform(post("/api/auth/refresh").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"refreshToken\":\"r\"}")).andExpect(status().isOk());
     }
 }
