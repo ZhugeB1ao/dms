@@ -1,6 +1,10 @@
 import { http, HttpResponse, delay } from 'msw'
 import { createDocumentHandlers } from '@/mocks/documentHandlers.ts'
 import { resetDocuments } from '@/mocks/documents.ts'
+import {
+  createDossierHandlers,
+  resetDossiers,
+} from '@/mocks/dossierHandlers.ts'
 import type { Role } from '@/shared/types/domain.ts'
 import type {
   CategoryItem,
@@ -263,6 +267,7 @@ function save() {
 
 export function resetMock() {
   resetDocuments()
+  resetDossiers()
   state = null
   accounts = initialAccounts.map((a) => ({ ...a }))
   passwords = {}
@@ -935,6 +940,7 @@ export const handlers = [
     departments,
     organizations,
   })),
+  ...createDossierHandlers(base, userFor),
 ]
 
 export const browserHandlers = handlers

@@ -10,6 +10,8 @@ import OcrPage from '@/features/ocr/pages/OcrPage.tsx'
 import ChatPage from '@/features/chat/pages/ChatPage.tsx'
 import DocumentsPage from '@/features/documents/pages/DocumentsPage.tsx'
 import DocumentDetailPage from '@/features/documents/pages/DocumentDetailPage.tsx'
+import DossiersPage from '@/features/dossiers/pages/DossiersPage.tsx'
+import DossierDetailPage from '@/features/dossiers/pages/DossierDetailPage.tsx'
 import type { DocumentDirection } from '@/features/documents/types.ts'
 import AppLayout from '@/layouts/AppLayout/AppLayout.tsx'
 import Workspace from '@/pages/Workspace.tsx'
@@ -99,6 +101,8 @@ export default function AppRouter() {
                   <ProfilePage />
                 ) : route.path === '/admin/categories' ? (
                   <CategoriesPage />
+                ) : route.path === '/records' ? (
+                  <DossiersPage />
                 ) : route.path === '/ocr' ? (
                   <OcrPage />
                 ) : route.path === '/chat' ? (
@@ -112,6 +116,9 @@ export default function AppRouter() {
         ))}
         <Route element={<Guard roles={['ADMIN', 'MANAGER', 'EMPLOYEE']} />}>
           <Route path="/documents/:id" element={<DocumentDetailPage />} />
+        </Route>
+        <Route element={<Guard roles={['MANAGER', 'EMPLOYEE']} />}>
+          <Route path="/records/:id" element={<DossierDetailPage />} />
         </Route>
         <Route path="403" element={<ForbiddenPage />} />
         <Route path="*" element={<NotFoundPage />} />
