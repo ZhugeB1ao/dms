@@ -12,7 +12,13 @@ it('loads a deep link, navigates tabs by keyboard and keeps published documents 
   await user.keyboard('{ArrowRight}')
   expect(screen.getByRole('tab', { name: 'Attachments' })).toHaveFocus()
   await screen.findByText('Sample document.pdf')
-  await screen.findByText(/File upload and download are not available yet/)
+  expect(screen.getByText(/This document is read-only\./)).toBeVisible()
+  expect(screen.getByRole('button', { name: 'Preview' })).toBeVisible()
+  expect(screen.getByRole('button', { name: 'Download' })).toBeVisible()
+  expect(screen.getByRole('button', { name: 'Versions' })).toBeVisible()
+  expect(screen.queryByLabelText(/Upload attachment/i)).toBeNull()
+  expect(screen.queryByRole('button', { name: 'Replace' })).toBeNull()
+  expect(screen.queryByRole('button', { name: 'Delete' })).toBeNull()
   await user.keyboard('{End}')
   expect(screen.getByRole('tab', { name: 'Status history' })).toHaveAttribute(
     'aria-selected',

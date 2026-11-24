@@ -1,4 +1,5 @@
 import type {
+  DocumentAttachment,
   DocumentDetail,
   StatusHistoryEntry,
 } from '@/features/documents/types.ts'
@@ -45,11 +46,37 @@ function seed(): DocumentDetail[] {
 export const documentStore = {
   documents: seed(),
   histories: new Map<number, StatusHistoryEntry[]>(),
+  attachments: new Map<number, DocumentAttachment[]>(),
+  attachmentDataUrls: new Map<number, string>(),
   nextId: 91,
+  nextAttachmentId: 91,
 }
 export function resetDocuments() {
   documentStore.documents = seed()
   documentStore.nextId = 91
+  documentStore.nextAttachmentId = 91
+  documentStore.attachmentDataUrls = new Map()
+  documentStore.attachments = new Map(
+    documentStore.documents
+      .filter((d) => d.id <= 90)
+      .map((d) => [
+        d.id,
+        [
+          {
+            id: d.id,
+            documentId: d.id,
+            fileGroupId: 'seed-group-1',
+            fileName: 'Sample document.pdf',
+            mimeType: 'application/pdf',
+            fileSize: 2048,
+            versionNo: 1,
+            isCurrent: true,
+            uploadedBy: 1,
+            uploadedAt: d.createdAt,
+          },
+        ],
+      ]),
+  )
   documentStore.histories = new Map(
     documentStore.documents.map((d) => [
       d.id,

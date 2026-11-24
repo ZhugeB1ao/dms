@@ -16,4 +16,10 @@ it('maps conflicts and accepts only string field errors', () => {
   expect(documentError(new Error('internal stack')).message).toBe(
     'Unable to complete the request. Try again.',
   )
+  expect(documentError({ response: { status: 413 } }).message).toBe(
+    'File exceeds the 10 MB limit.',
+  )
+  expect(documentError({ response: { status: 415 } }).message).toBe(
+    'Unsupported file type. Allowed: PDF, PNG, JPG, WEBP, DOCX, XLSX.',
+  )
 })

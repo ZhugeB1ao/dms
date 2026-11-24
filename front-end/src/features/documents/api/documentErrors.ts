@@ -12,6 +12,8 @@ export function documentError(error: unknown) {
     409: 'The document changed. Reload before continuing.',
     400: 'Check the fields below.',
     422: 'Check the fields below.',
+    413: 'File exceeds the 10 MB limit.',
+    415: 'Unsupported file type. Allowed: PDF, PNG, JPG, WEBP, DOCX, XLSX.',
   }
   const raw = response?.data?.fieldErrors
   const fields: Record<string, string> =

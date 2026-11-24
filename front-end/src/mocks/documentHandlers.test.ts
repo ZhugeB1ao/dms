@@ -3,6 +3,10 @@ import { setupServer } from 'msw/node'
 import { handlers, resetMock } from '@/mocks/handlers.ts'
 import { api, authHttp, session } from '@/shared/api/http.ts'
 import { documentsApi } from '@/features/documents/api/documentsApi.ts'
+import {
+  attachmentsApi,
+  MAX_ATTACHMENT_BYTES,
+} from '@/features/documents/api/attachmentsApi.ts'
 import { categoryApi } from '@/features/categories/api/categoryApi.ts'
 import { documentStore } from '@/mocks/documents.ts'
 
@@ -167,4 +171,101 @@ it('allows assignee reads but denies writes and filters Manager totals by depart
   })
   expect(page.totalElements).toBe(15)
   expect(page.content.every((doc) => doc.departmentId === 1)).toBe(true)
+})
+it('uploads, replaces, lists versions, enforces limits/types/scopes, and deletes attachments', async () => {
+  await login()
+  const doc = await documentsApi.create(input)
+  expect(await attachmentsApi.list(doc.id)).toEqual([])
+
+  const v1 = await attachmentsApi.upload(
+    doc.id,
+    new File(['%PDF-1.4'], 'draft.pdf', { type: 'application/pdf' }),
+  )
+  expect(v1).toMatchObject({
+    documentId: doc.id,
+    fileName: 'draft.pdf',
+    versionNo: 1,
+    isCurrent: true,
+  })
+
+  const v2 = await attachmentsApi.replace(
+    doc.id,
+    v1.id,
+    new File(['%PDF-1.5'], 'revised.pdf', { type: 'application/pdf' }),
+  )
+  expect(v2).toMatchObject({
+    fileGroupId: v1.fileGroupId,
+    fileName: 'revised.pdf',
+    versionNo: 2,
+    isCurrent: true,
+  })
+  expect(await attachmentsApi.list(doc.id)).toHaveLength(1)
+
+  const versions = await attachmentsApi.versions(doc.id, v2.id)
+  expect(versions).toHaveLength(2)
+  expect(versions[0]).toMatchObject({
+    id: v2.id,
+    versionNo: 2,
+    isCurrent: true,
+  })
+  expect(versions[1]).toMatchObject({
+    id: v1.id,
+    versionNo: 1,
+    isCurrent: false,
+  })
+
+  const docx = await attachmentsApi.upload(
+    doc.id,
+    new File(['docx'], 'notes.docx', {
+      type: 'application/octet-stream',
+    }),
+  )
+  expect(docx.mimeType).toBe(
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  )
+  const signedPdf = await attachmentsApi.getUrl(doc.id, v2.id, 'inline')
+  expect(signedPdf.url.startsWith('data:application/pdf')).toBe(true)
+  expect(signedPdf.expiresInSeconds).toBe(300)
+  expect(signedPdf.disposition).toBe('inline')
+
+  const signedDocx = await attachmentsApi.getUrl(doc.id, docx.id, 'inline')
+  expect(signedDocx.disposition).toBe('attachment')
+
+  await expect(
+    attachmentsApi.upload(
+      doc.id,
+      new File([], 'empty.pdf', { type: 'application/pdf' }),
+    ),
+  ).rejects.toMatchObject({
+    response: { status: 400, data: { message: 'File must not be empty.' } },
+  })
+
+  await expect(
+    attachmentsApi.upload(
+      doc.id,
+      new File([new Uint8Array(MAX_ATTACHMENT_BYTES + 1)], 'huge.pdf', {
+        type: 'application/pdf',
+      }),
+    ),
+  ).rejects.toMatchObject({ response: { status: 413 } })
+
+  await expect(
+    attachmentsApi.upload(
+      doc.id,
+      new File(['MZ'], 'bad.exe', { type: 'application/x-msdownload' }),
+    ),
+  ).rejects.toMatchObject({ response: { status: 415 } })
+
+  await login('employee')
+  await expect(
+    attachmentsApi.getUrl(doc.id, v2.id, 'inline'),
+  ).rejects.toMatchObject({ response: { status: 403 } })
+
+  await login()
+  await expect(attachmentsApi.remove(3, 3)).rejects.toMatchObject({
+    response: { status: 409 },
+  })
+
+  await attachmentsApi.remove(doc.id, v2.id)
+  expect(await attachmentsApi.list(doc.id)).toEqual([docx])
 })
