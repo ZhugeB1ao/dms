@@ -9,6 +9,7 @@ import com.example.documentservice.dto.PageResponse;
 import com.example.documentservice.entity.*;
 import com.example.documentservice.repository.DocumentHistoryRepository;
 import com.example.documentservice.repository.DocumentRepository;
+import com.example.documentservice.repository.DossierRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.PageRequest;
@@ -22,12 +23,14 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
 public class DocumentService {
     private final DocumentRepository documents;
     private final DocumentHistoryRepository histories;
+    private final DossierRepository dossiers;
     private final CatalogClient catalog;
     private final TransactionTemplate tx;
 
@@ -58,6 +61,7 @@ public class DocumentService {
     public DocumentResponse create(Caller caller, DocumentRequest req) {
         validate(req);
         return tx.execute(s -> {
+            validateDossierChange(caller, null, req.dossierId());
             Document d = save(apply(Document.builder().ownerId(caller.id()).departmentId(caller.departmentId()).build(), req));
             record(d, HistoryAction.CREATE, null, caller);
             return DocumentResponse.from(d);
@@ -67,7 +71,9 @@ public class DocumentService {
     public DocumentResponse update(Caller caller, long id, DocumentRequest req) {
         validate(req);
         return tx.execute(s -> {
-            Document d = save(apply(findEditableDraft(caller, id), req));
+            Document existing = findEditableDraft(caller, id);
+            validateDossierChange(caller, existing.getDossierId(), req.dossierId());
+            Document d = save(apply(existing, req));
             record(d, HistoryAction.UPDATE, DocumentStatus.DRAFT, caller);
             return DocumentResponse.from(d);
         });
@@ -103,6 +109,10 @@ public class DocumentService {
         return (root, query, cb) -> value == null ? cb.conjunction() : cb.equal(root.get(field), value);
     }
 
+    public static Specification<Document> visibleToSpec(Caller c) {
+        return visibleTo(c);
+    }
+
     public Document requireVisible(Caller caller, long id) {
         return findVisible(caller, id);
     }
@@ -134,6 +144,32 @@ public class DocumentService {
         requireActive(CatalogClient.Type.DOC_TYPE, r.docTypeId());
         requireActive(CatalogClient.Type.URGENCY, r.urgencyId());
         requireActive(CatalogClient.Type.CONFIDENTIALITY, r.confidentialityId());
+    }
+
+    private void validateDossierChange(Caller caller, Long currentDossierId, Long targetDossierId) {
+        if (Objects.equals(currentDossierId, targetDossierId)) {
+            return;
+        }
+        if (currentDossierId != null) {
+            dossiers.findById(currentDossierId).ifPresent(old -> {
+                if (old.isClosed()) {
+                    throw new ResponseStatusException(HttpStatus.CONFLICT,
+                            "Cannot detach or move a document from a closed dossier.");
+                }
+            });
+        }
+        if (targetDossierId != null) {
+            Dossier target = dossiers.findById(targetDossierId)
+                    .orElseThrow(() -> badRequest("dossierId does not exist"));
+            if (!target.getDepartmentId().equals(caller.departmentId())) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                        "Cannot attach a document to a dossier owned by another department.");
+            }
+            if (target.isClosed()) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT,
+                        "Cannot attach documents to a closed dossier.");
+            }
+        }
     }
 
     private void requireActive(CatalogClient.Type type, long id) {

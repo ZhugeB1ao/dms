@@ -188,7 +188,7 @@ class DocumentApiIntegrationTest {
         assertThat(documents.count()).isZero();
         assertThat(histories.count()).isZero();
 
-        jdbc.update("insert into dossiers (name, department_id) values ('Hồ sơ A', 1)");
+        jdbc.update("insert into dossiers (code, code_normalized, name, dossier_year, department_id) values ('HS-01', 'hs-01', 'Hồ sơ A', 2026, 1)");
         long dossierId = jdbc.queryForObject("select max(id) from dossiers", Long.class);
         mvc.perform(as(OWNER, post("/api/documents")).content("""
                 {"direction":"INTERNAL","docTypeId":1,"summary":"x","urgencyId":2,"confidentialityId":3,"dossierId":%d}""".formatted(dossierId)))
