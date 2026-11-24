@@ -15,6 +15,8 @@ tags:
     ng thuộc quyền xem của người gọi trả 404."
 - name: Attachments
   description: "Tệp đính kèm văn bản trên MinIO. Upload/thay thế/xóa chỉ áp dụng cho owner khi văn bản còn DRAFT."
+- name: Dossiers
+  description: "Hồ sơ lưu trữ văn bản theo đơn vị và năm. Chỉ MANAGER và EMPLOYEE được phép truy cập (ADMIN trả 403); mọi API cần đăng nhập (401); hồ sơ ngoài đơn vị hoặc không tồn tại trả 404."
 paths:
   /api/documents/{id}:
     get:
@@ -159,6 +161,10 @@ paths:
         "400":
           description: "Danh mục không tồn tại hoặc ngưng hoạt động, hồ sơ không tồ\
             n tại, hoặc cột công văn đến dùng cho văn bản không phải INCOMING"
+        "403":
+          description: Hồ sơ thuộc đơn vị khác
+        "409":
+          description: Hồ sơ đã đóng
         "503":
           description: Không gọi được category-service
         "201":
@@ -404,6 +410,270 @@ paths:
           description: Tham số disposition không hợp lệ
         "404":
           description: Không có văn bản, không có tệp, hoặc không được xem
+  /api/dossiers:
+    get:
+      tags:
+      - Dossiers
+      summary: Danh sách hồ sơ thuộc đơn vị người gọi (phân trang, sắp xếp theo năm giảm dần, id giảm dần)
+      operationId: listDossiers
+      parameters:
+      - name: year
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+      - name: closed
+        in: query
+        required: false
+        schema:
+          type: boolean
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 0
+          minimum: 0
+      - name: size
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 20
+          maximum: 100
+          minimum: 1
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/PageResponseDossierResponse"
+        "403":
+          description: Chỉ MANAGER hoặc EMPLOYEE được phép thao tác hồ sơ
+    post:
+      tags:
+      - Dossiers
+      summary: Tạo mới hồ sơ cho đơn vị người gọi
+      operationId: createDossier
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DossierRequest"
+      responses:
+        "201":
+          description: Created
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/DossierResponse"
+        "400":
+          description: Dữ liệu không hợp lệ
+        "403":
+          description: Chỉ MANAGER hoặc EMPLOYEE được phép thao tác hồ sơ
+        "409":
+          description: Trùng mã hồ sơ trong cùng đơn vị và năm
+  /api/dossiers/{id}:
+    get:
+      tags:
+      - Dossiers
+      summary: Chi tiết hồ sơ thuộc đơn vị người gọi
+      operationId: getDossier
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/DossierResponse"
+        "403":
+          description: Chỉ MANAGER hoặc EMPLOYEE được phép thao tác hồ sơ
+        "404":
+          description: Hồ sơ không tồn tại hoặc thuộc đơn vị khác
+    put:
+      tags:
+      - Dossiers
+      summary: Cập nhật thông tin hồ sơ (chỉ khi hồ sơ chưa đóng)
+      operationId: updateDossier
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DossierRequest"
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/DossierResponse"
+        "400":
+          description: Dữ liệu không hợp lệ
+        "403":
+          description: Chỉ MANAGER hoặc EMPLOYEE được phép thao tác hồ sơ
+        "404":
+          description: Hồ sơ không tồn tại hoặc thuộc đơn vị khác
+        "409":
+          description: Hồ sơ đã đóng hoặc trùng mã hồ sơ trong cùng đơn vị và năm
+  /api/dossiers/{id}/close:
+    post:
+      tags:
+      - Dossiers
+      summary: Đóng hồ sơ lưu trữ
+      operationId: closeDossier
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/DossierResponse"
+        "403":
+          description: Chỉ MANAGER hoặc EMPLOYEE được phép thao tác hồ sơ
+        "404":
+          description: Hồ sơ không tồn tại hoặc thuộc đơn vị khác
+        "409":
+          description: Hồ sơ đã được đóng trước đó
+  /api/dossiers/{id}/documents:
+    get:
+      tags:
+      - Dossiers
+      summary: Danh sách văn bản trong hồ sơ mà người gọi được xem (mới nhất trước)
+      operationId: listDossierDocuments
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DocumentResponse"
+        "403":
+          description: Chỉ MANAGER hoặc EMPLOYEE được phép thao tác hồ sơ
+        "404":
+          description: Hồ sơ không tồn tại hoặc thuộc đơn vị khác
+    post:
+      tags:
+      - Dossiers
+      summary: Gắn văn bản vào hồ sơ (idempotent nếu đã gắn đúng hồ sơ này)
+      operationId: attachDocument
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AttachDocumentRequest"
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/DocumentResponse"
+        "400":
+          description: Thiếu documentId
+        "403":
+          description: Không phải MANAGER/EMPLOYEE hoặc văn bản thuộc đơn vị khác
+        "404":
+          description: Không tìm thấy hồ sơ hoặc không có quyền xem văn bản
+        "409":
+          description: Hồ sơ đã đóng hoặc văn bản đã thuộc hồ sơ khác
+  /api/dossiers/{id}/available-documents:
+    get:
+      tags:
+      - Dossiers
+      summary: Danh sách văn bản cùng đơn vị chưa gắn hồ sơ và người gọi được xem
+      operationId: listAvailableDocuments
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DocumentResponse"
+        "403":
+          description: Chỉ MANAGER hoặc EMPLOYEE được phép thao tác hồ sơ
+        "404":
+          description: Hồ sơ không tồn tại hoặc thuộc đơn vị khác
+  /api/dossiers/{id}/documents/{documentId}:
+    delete:
+      tags:
+      - Dossiers
+      summary: Gỡ văn bản khỏi hồ sơ
+      operationId: detachDocument
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      - name: documentId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "204":
+          description: No Content
+        "403":
+          description: Chỉ MANAGER hoặc EMPLOYEE được phép thao tác hồ sơ
+        "404":
+          description: Không tìm thấy hồ sơ, không xem được văn bản, hoặc văn bản không nằm trong hồ sơ này
+        "409":
+          description: Hồ sơ đã đóng
 components:
   schemas:
     AttachmentResponse:
@@ -555,6 +825,77 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/DocumentResponse"
+        page:
+          type: integer
+          format: int32
+        size:
+          type: integer
+          format: int32
+        totalElements:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
+          format: int32
+    DossierRequest:
+      type: object
+      properties:
+        code:
+          type: string
+          maxLength: 50
+          minLength: 1
+        name:
+          type: string
+          maxLength: 255
+          minLength: 1
+        year:
+          type: integer
+          format: int32
+          maximum: 2100
+          minimum: 1900
+      required:
+      - code
+      - name
+      - year
+    DossierResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        code:
+          type: string
+        name:
+          type: string
+        year:
+          type: integer
+          format: int32
+        departmentId:
+          type: integer
+          format: int64
+        closed:
+          type: boolean
+        documentCount:
+          type: integer
+          format: int64
+        createdAt:
+          type: string
+          format: date-time
+    AttachDocumentRequest:
+      type: object
+      properties:
+        documentId:
+          type: integer
+          format: int64
+      required:
+      - documentId
+    PageResponseDossierResponse:
+      type: object
+      properties:
+        content:
+          type: array
+          items:
+            $ref: "#/components/schemas/DossierResponse"
         page:
           type: integer
           format: int32

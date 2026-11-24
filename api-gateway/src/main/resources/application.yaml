@@ -53,11 +53,11 @@ spring:
             filters:
               - RemoveRequestHeader=Origin
 
-          # ── Document Service: quản lý văn bản & tệp đính kèm (:8085) ────
+          # ── Document Service: quản lý văn bản, hồ sơ & tệp đính kèm (:8085) ────
           - id: file-service
             uri: ${DOCUMENT_SERVICE_URL:${FILE_SERVICE_URL:http://localhost:8085}}
             predicates:
-              - Path=/api/documents, /api/documents/**
+              - Path=/api/documents, /api/documents/**, /api/dossiers, /api/dossiers/**
             filters:
               - RemoveRequestHeader=Origin
 
