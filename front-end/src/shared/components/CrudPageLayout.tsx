@@ -179,6 +179,10 @@ export interface CrudFormDialogProps {
   submitting: boolean
   isCreate: boolean
   submitDisabled?: boolean
+  submitLabel?: string
+  pendingLabel?: string
+  danger?: boolean
+  secondaryAction?: ReactNode
   onClose: () => void
   onSubmit: (event: FormEvent<HTMLFormElement>) => void
   children: ReactNode
@@ -193,6 +197,10 @@ export function CrudFormDialog({
   submitting,
   isCreate,
   submitDisabled = false,
+  submitLabel,
+  pendingLabel = 'Saving…',
+  danger = false,
+  secondaryAction,
   onClose,
   onSubmit,
   children,
@@ -253,9 +261,15 @@ export function CrudFormDialog({
               variant="primary"
               type="submit"
               disabled={submitting || submitDisabled}
+              className={
+                danger ? '!bg-red-600 hover:!bg-red-500 !text-white' : undefined
+              }
             >
-              {submitting ? 'Saving…' : isCreate ? 'Create' : 'Save'}
+              {submitting
+                ? pendingLabel
+                : (submitLabel ?? (isCreate ? 'Create' : 'Save'))}
             </Button>
+            {secondaryAction}
           </div>
         </form>
       </div>
@@ -272,6 +286,7 @@ export interface ConfirmDeactivateDialogProps {
   submitting: boolean
   confirmLabel?: string
   pendingLabel?: string
+  danger?: boolean
   onClose: () => void
   onConfirm: () => void
 }
@@ -285,6 +300,7 @@ export function ConfirmDeactivateDialog({
   submitting,
   confirmLabel = 'Deactivate',
   pendingLabel = 'Deactivating…',
+  danger = true,
   onClose,
   onConfirm,
 }: ConfirmDeactivateDialogProps) {
@@ -312,7 +328,7 @@ export function ConfirmDeactivateDialog({
 
         <h2
           id={confirmTitleId}
-          className="modal-title !text-xl mb-3 text-red-400"
+          className={`modal-title !text-xl mb-3 ${danger ? 'text-red-400' : ''}`}
         >
           {title}
         </h2>
@@ -344,7 +360,9 @@ export function ConfirmDeactivateDialog({
             type="button"
             onClick={onConfirm}
             disabled={submitting}
-            className="!bg-red-600 hover:!bg-red-500 !text-white"
+            className={
+              danger ? '!bg-red-600 hover:!bg-red-500 !text-white' : undefined
+            }
           >
             {submitting ? pendingLabel : confirmLabel}
           </Button>

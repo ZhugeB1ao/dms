@@ -6,8 +6,11 @@ export const documentDirections: Record<DocumentDirection, string> = {
 }
 export const documentStatuses: Record<string, string> = {
   DRAFT: 'Draft',
+  PENDING_APPROVAL: 'Pending approval',
   READY_TO_PUBLISH: 'Ready to publish',
   PUBLISHED: 'Published',
+  REJECTED: 'Rejected',
+  RECALLED: 'Recalled',
 }
 export interface Lookup {
   id: number
@@ -36,6 +39,12 @@ export interface DocumentSummary extends DraftInput {
 }
 export interface DocumentDetail extends DocumentSummary {
   version: number
+  reviewerId?: number
+  reviewerName?: string
+  submittedAt?: string
+  submittedByName?: string
+  documentNumber?: string
+  canPublish?: boolean
   lookups: Record<
     | 'documentType'
     | 'urgency'
@@ -67,6 +76,7 @@ export interface StatusHistoryEntry {
   actorName: string
   occurredAt: string
   note?: string
+  action?: WorkflowCommand['action']
 }
 export interface DocumentAttachment {
   id: number
@@ -75,4 +85,31 @@ export interface DocumentAttachment {
   contentType: string
   uploadedBy: string
   uploadedAt: string
+  canDownload?: boolean
+}
+
+export type WorkflowCommand = { version: number } & (
+  | { action: 'submit'; reviewerId: number }
+  | { action: 'approve' | 'publish' }
+  | { action: 'reject' | 'recall'; reason: string }
+)
+
+export interface Reviewer {
+  id: number
+  name: string
+}
+
+export type PendingQuery = Pick<
+  DocumentQuery,
+  'page' | 'size' | 'documentTypeId'
+> & {
+  direction?: DocumentDirection
+}
+
+export interface PendingApprovals extends Omit<DocumentPage, 'content'> {
+  content: (DocumentSummary & {
+    submittedByName: string
+    submittedAt: string
+  })[]
+  pendingCount: number
 }

@@ -51,6 +51,22 @@ Set `VITE_ENABLE_MOCKS=true` in development and restart Vite. Existing `.env` se
 
 For real integration set `VITE_ENABLE_MOCKS=false`. Production builds never enable MSW. No document/file content is persisted to localStorage.
 
+## FE-4 workflow mock
+
+Các operation sau chạy trên cùng kho văn bản MSW với FE-3. Đây là hợp đồng mock phục vụ triển khai FE-4. BE-4 và FS-3 cần xác nhận path, payload, quyền và kiểu response trước khi nghiệm thu API thật.
+
+| Operation | Hợp đồng đang dùng trên mock | BE-4 / FS-3 cần xác nhận |
+| --- | --- | --- |
+| `GET /documents/:id/workflow/reviewers` | Trả `{id, name}[]` cho tác giả của bản thảo. Reviewer là Manager đang hoạt động cùng đơn vị. | Reviewer được phép nhận theo loại, hướng và đơn vị. |
+| `GET /documents/pending-approvals` | Manager nhận việc được giao cho mình. Hỗ trợ `page` từ 0, `size` 10/20/50, `direction` và `documentTypeId`. Trả `content`, `page`, `size`, `totalPages`, `totalElements` sau lọc và `pendingCount` trước lọc. | Nguồn tổng chờ, thứ tự và quyền truy cập inbox. |
+| `POST /documents/:id/workflow/transition` | Nhận `action`, `version`, thêm `reviewerId` khi submit hoặc `reason` khi reject/recall. Trả chi tiết mới. Adapter cũng xử lý 204 bằng một lần GET riêng ở trang chi tiết. | Có dùng endpoint tách theo action hoặc ETag, mã lỗi và kiểu response. |
+| `GET /documents/:id` và `/history` | Chi tiết có thể thêm reviewer, thời điểm trình, `documentNumber` và `canPublish` theo tài khoản gọi. History thêm `action` và ghi người duyệt, số hoặc lý do trong `note`. | Mã trạng thái, quyền cấp số, cấu trúc và thứ tự phụ của sự kiện. |
+| `GET /documents/:id/attachments/:fileId/content` | Trả nội dung tệp mẫu nếu người gọi có quyền xem văn bản và metadata có `canDownload`. Dùng cùng phiên xác thực với Documents. | Cách xem/tải tệp thật và xử lý quyền đọc từ FS-3. |
+
+Mock chuyển `DRAFT` → `PENDING_APPROVAL` → `READY_TO_PUBLISH` → `PUBLISHED` → `RECALLED`. Từ chối chuyển sang `REJECTED`. Manager được giao mới duyệt hoặc từ chối. Quyền cấp số được cấp cho Manager mẫu trên văn bản cùng đơn vị, còn quyền thu hồi áp dụng cho Manager cùng đơn vị khi văn bản đã công bố. Số do mock cấp được lưu cùng phiên bản mới và sự kiện lịch sử. Lý do được trim, chuỗi rỗng trả 422, quyền sai trả 403, và version hoặc trạng thái cũ trả 409.
+
+Kho mock giữ thay đổi trong bộ nhớ của trang. Đổi role qua đăng xuất và đăng nhập trong cùng tab để kiểm luồng nhiều vai trò. Tải lại toàn trang khởi tạo lại dữ liệu mẫu.
+
 ## Pending BE-3 and FS-3 handoff
 
 - Confirm endpoints, response envelope, ID types, statuses, pagination, sorting, validation and permissions against OpenAPI. Adapt only `documentsApi`/types when needed; do not treat this proposal as backend approval.

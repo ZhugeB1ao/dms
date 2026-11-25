@@ -8,6 +8,14 @@ import { documentStatuses } from '@/features/documents/types.ts'
 const statusLabel = (status: string) =>
   Object.hasOwn(documentStatuses, status) ? documentStatuses[status] : 'Unknown'
 
+const actionLabels = {
+  submit: 'Submitted for approval',
+  approve: 'Approved',
+  reject: 'Rejected',
+  publish: 'Published',
+  recall: 'Recalled',
+}
+
 export default function DocumentHistoryTab({
   documentId,
 }: {
@@ -20,7 +28,9 @@ export default function DocumentHistoryTab({
           .history(documentId, signal)
           .then((entries) =>
             [...entries].sort(
-              (a, b) => a.occurredAt.localeCompare(b.occurredAt) || a.id - b.id,
+              (a, b) =>
+                Date.parse(b.occurredAt) - Date.parse(a.occurredAt) ||
+                b.id - a.id,
             ),
           ),
       [documentId],
@@ -40,8 +50,11 @@ export default function DocumentHistoryTab({
       {data.map((entry) => (
         <li key={entry.id} className="border-l-2 border-neutral-700 pl-4">
           <p>
-            {entry.fromStatus ? statusLabel(entry.fromStatus) : 'Created'} →{' '}
-            {statusLabel(entry.toStatus)}
+            {entry.action && Object.hasOwn(actionLabels, entry.action)
+              ? actionLabels[entry.action]
+              : entry.fromStatus
+                ? `${statusLabel(entry.fromStatus)} → ${statusLabel(entry.toStatus)}`
+                : 'Draft created'}
           </p>
           <p className="text-sm text-neutral-400">
             {entry.actorName} ·{' '}

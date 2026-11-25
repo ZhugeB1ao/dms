@@ -46,10 +46,12 @@ export const documentStore = {
   documents: seed(),
   histories: new Map<number, StatusHistoryEntry[]>(),
   nextId: 91,
+  nextDocumentNumber: 1,
 }
 export function resetDocuments() {
   documentStore.documents = seed()
   documentStore.nextId = 91
+  documentStore.nextDocumentNumber = 1
   documentStore.histories = new Map(
     documentStore.documents.map((d) => [
       d.id,

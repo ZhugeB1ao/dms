@@ -1,10 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Link, useSearchParams } from 'react-router'
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router'
 import { useAuth } from '@/features/auth/context/useAuth.ts'
 import { categoryApi } from '@/features/categories/api/categoryApi.ts'
 import { departmentApi } from '@/features/departments/api/departmentApi.ts'
 import {
-  CrudHeader,
   CrudPagination,
   CrudToolbar,
 } from '@/shared/components/CrudPageLayout.tsx'
@@ -14,7 +13,11 @@ import { crudFilterClassName } from '@/shared/components/crudStyles.ts'
 import { useFetch } from '@/shared/hooks/useFetch.ts'
 import { documentsApi } from '@/features/documents/api/documentsApi.ts'
 import { documentError } from '@/features/documents/api/documentErrors.ts'
-import { canEditDraft } from '@/features/documents/permissions.ts'
+import {
+  canEditDraft,
+  canUseApprovalInbox,
+} from '@/features/documents/permissions.ts'
+import { documentWorkflowApi } from '@/features/documents/api/documentWorkflowApi.ts'
 import {
   documentDirections,
   documentStatuses,
@@ -48,6 +51,8 @@ export default function DocumentsPage({
 function DocumentList({ direction }: { direction: DocumentDirection }) {
   const { user } = useAuth()
   const [params, setParams] = useSearchParams()
+  const location = useLocation()
+  const navigate = useNavigate()
   const positive = (value: string | null) =>
     value && Number.isSafeInteger(Number(value)) && Number(value) > 0
       ? Number(value)
@@ -85,6 +90,16 @@ function DocumentList({ direction }: { direction: DocumentDirection }) {
     ),
   )
   const options = useFetch(loadFilterOptions)
+  const canReview = canUseApprovalInbox(user)
+  const approvals = useFetch(
+    useCallback(
+      (signal: AbortSignal) =>
+        canReview
+          ? documentWorkflowApi.pending({ page: 0, size: 10 }, signal)
+          : Promise.resolve(null),
+      [canReview],
+    ),
+  )
   const [modal, setModal] = useState<
     | { kind: 'edit' | 'delete'; document: DocumentDetail }
     | { kind: 'create' }
@@ -108,9 +123,12 @@ function DocumentList({ direction }: { direction: DocumentDirection }) {
   const [previous, setPrevious] = useState(fresh)
   if (fresh && fresh !== previous) setPrevious(fresh)
   const data = fresh ?? previous
+  // navigate() instead of setParams(): setParams drops the #hash.
+  const hash = location.hash
   useEffect(() => {
-    if (originalQuery !== targetQuery) setParams(targetQuery, { replace: true })
-  }, [originalQuery, targetQuery, setParams])
+    if (originalQuery !== targetQuery)
+      void navigate({ search: targetQuery, hash }, { replace: true })
+  }, [originalQuery, targetQuery, hash, navigate])
   useEffect(() => () => action.current?.abort(), [queryString])
   function change(key: string, value: string) {
     const next = new URLSearchParams(queryString)
@@ -149,11 +167,38 @@ function DocumentList({ direction }: { direction: DocumentDirection }) {
   }
   return (
     <section className="p-6 sm:p-10 min-w-0">
-      <CrudHeader
-        title={`${documentDirections[direction]} documents`}
-        createLabel="+ Create draft"
-        onCreate={() => setModal({ kind: 'create' })}
-      />
+      <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
+        <h1 className="mt-3 text-3xl">
+          {documentDirections[direction]} documents
+        </h1>
+        <div className="flex flex-wrap items-center gap-3">
+          {canReview && (
+            <Link
+              className="button button--secondary !rounded-full inline-flex items-center gap-2"
+              to="/documents/pending-approvals"
+            >
+              Pending approvals
+              {approvals.data && (
+                <span className="rounded-full bg-sky-950 px-2 py-0.5 text-xs text-sky-200">
+                  {approvals.data.pendingCount}
+                </span>
+              )}
+            </Link>
+          )}
+          <Button
+            className="!rounded-full px-5 py-2 font-medium"
+            onClick={() => setModal({ kind: 'create' })}
+          >
+            + Create draft
+          </Button>
+        </div>
+      </div>
+      {canReview && approvals.error !== undefined && (
+        <p role="status" className="mb-4 text-sm text-neutral-400">
+          Pending count unavailable.{' '}
+          <Button onClick={approvals.retry}>Retry count</Button>
+        </p>
+      )}
       <nav
         aria-label="Document directions"
         className="flex flex-wrap gap-5 mb-6"

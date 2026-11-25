@@ -28,7 +28,18 @@ export const routes: RouteConfig[] = [
   { path: '/ocr', label: 'OCR & Documents', roles: ['ADMIN', ...staff] },
   { path: '/chat', label: 'AI Assistant', roles: ['ADMIN', ...staff] },
   { path: '/tasks', label: 'My tasks', roles: staff },
-  { path: '/approvals', label: 'Pending approvals', roles: ['MANAGER'] },
+  {
+    path: '/documents/pending-approvals',
+    label: 'Pending approvals',
+    roles: ['MANAGER'],
+    showInSidebar: false,
+  },
+  {
+    path: '/approvals',
+    label: 'Pending approvals',
+    roles: ['MANAGER'],
+    showInSidebar: false,
+  },
   { path: '/admin/users', label: 'Users', roles: ['ADMIN'] },
   {
     path: '/profile',

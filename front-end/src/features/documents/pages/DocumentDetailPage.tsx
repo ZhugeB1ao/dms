@@ -1,17 +1,21 @@
 import { useCallback, useRef, useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router'
+import { Link, useLocation, useNavigate, useParams } from 'react-router'
 import { useAuth } from '@/features/auth/context/useAuth.ts'
 import Button from '@/shared/components/Button.tsx'
 import { useFetch } from '@/shared/hooks/useFetch.ts'
 import { documentsApi } from '@/features/documents/api/documentsApi.ts'
 import { documentError } from '@/features/documents/api/documentErrors.ts'
-import { canEditDraft } from '@/features/documents/permissions.ts'
+import {
+  canEditDraft,
+  canUseApprovalInbox,
+} from '@/features/documents/permissions.ts'
 import { documentDirections } from '@/features/documents/types.ts'
 import DocumentStatusBadge from '@/features/documents/components/DocumentStatusBadge.tsx'
 import DocumentFormDialog from '@/features/documents/components/DocumentFormDialog.tsx'
 import DeleteDraftDialog from '@/features/documents/components/DeleteDraftDialog.tsx'
 import DocumentHistoryTab from '@/features/documents/components/DocumentHistoryTab.tsx'
 import DocumentAttachmentsTab from '@/features/documents/components/DocumentAttachmentsTab.tsx'
+import DocumentWorkflowActions from '@/features/documents/components/DocumentWorkflowActions.tsx'
 
 export default function DocumentDetailPage() {
   const { id } = useParams()
@@ -32,6 +36,7 @@ export default function DocumentDetailPage() {
 function DocumentDetailView({ id }: { id: number }) {
   const { user } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
   const {
     data: doc,
     error,
@@ -45,24 +50,51 @@ function DocumentDetailView({ id }: { id: number }) {
   const [tabRevision, setTabRevision] = useState(0)
   const [tab, setTab] = useState(0)
   const [modal, setModal] = useState<'edit' | 'delete' | null>(null)
+  const [workflowLocked, setWorkflowLocked] = useState(false)
+  const [workflowNotice, setWorkflowNotice] = useState('')
+  const [workflowReadError, setWorkflowReadError] = useState('')
+  const heading = useRef<HTMLHeadingElement>(null)
   const tabs = useRef<(HTMLButtonElement | null)[]>([])
   function reload() {
     setModal(null)
+    setWorkflowLocked(false)
+    setWorkflowReadError('')
+    setTabRevision((n) => n + 1)
     retry()
   }
+  const focusHeading = useCallback(() => heading.current?.focus(), [])
+  const pendingSearch: unknown = location.state?.pendingApprovalsSearch
+  const fromInbox =
+    canUseApprovalInbox(user) &&
+    typeof pendingSearch === 'string' &&
+    (pendingSearch === '' || pendingSearch.startsWith('?'))
   return (
     <section className="p-6 sm:p-10 min-w-0">
       <Link
-        className="text-link"
+        className="button button--secondary !rounded-full inline-flex"
         to={
-          doc
-            ? `/documents/${doc.direction.toLowerCase()}`
-            : '/documents/incoming'
+          fromInbox
+            ? {
+                pathname: '/documents/pending-approvals',
+                search: pendingSearch,
+              }
+            : doc
+              ? `/documents/${doc.direction.toLowerCase()}`
+              : '/documents/incoming'
         }
       >
-        Back to documents
+        {fromInbox ? 'Back to pending approvals' : 'Back to documents'}
       </Link>
-      {loading ? (
+      {workflowNotice && (
+        <p role="status" className="mt-4">
+          {workflowNotice}
+        </p>
+      )}
+      {workflowReadError ? (
+        <p role="alert" className="mt-6">
+          {workflowReadError} <Button onClick={reload}>Retry document</Button>
+        </p>
+      ) : loading ? (
         <p role="status" className="mt-6">
           Loading document…
         </p>
@@ -79,17 +111,36 @@ function DocumentDetailView({ id }: { id: number }) {
                 <p className="text-sm text-neutral-400 mb-2">
                   {documentDirections[doc.direction]} correspondence
                 </p>
-                <h1 className="text-3xl break-words mb-4">{doc.summary}</h1>
+                <h1
+                  ref={heading}
+                  tabIndex={-1}
+                  className="text-3xl break-words mb-4"
+                >
+                  {doc.summary}
+                </h1>
                 <DocumentStatusBadge status={doc.status} />
               </div>
-              {canEditDraft(user, doc) && (
-                <div className="flex flex-wrap gap-3">
-                  <Button onClick={() => setModal('edit')}>Edit draft</Button>
-                  <Button onClick={() => setModal('delete')}>
-                    Delete draft
-                  </Button>
-                </div>
-              )}
+              <div className="flex flex-col items-start gap-3">
+                {canEditDraft(user, doc) && !workflowLocked && (
+                  <div className="flex flex-wrap gap-3">
+                    <Button onClick={() => setModal('edit')}>Edit draft</Button>
+                    <Button onClick={() => setModal('delete')}>
+                      Delete draft
+                    </Button>
+                  </div>
+                )}
+                <DocumentWorkflowActions
+                  document={doc}
+                  onDocumentChanged={(fresh) => {
+                    setData(fresh)
+                    setTabRevision((n) => n + 1)
+                  }}
+                  onLockedChange={setWorkflowLocked}
+                  onNotice={setWorkflowNotice}
+                  onUnavailable={setWorkflowReadError}
+                  focusHeading={focusHeading}
+                />
+              </div>
             </div>
             <div
               role="tablist"
@@ -149,6 +200,10 @@ function DocumentDetailView({ id }: { id: number }) {
                     'Issuing organization':
                       doc.lookups.issuingOrganization.name,
                     'Responsible department': doc.lookups.department.name,
+                    ...(doc.documentNumber
+                      ? { 'Document number': doc.documentNumber }
+                      : {}),
+                    ...(doc.reviewerName ? { Reviewer: doc.reviewerName } : {}),
                     'Created by': `User ${doc.createdBy}`,
                     Created: new Date(doc.createdAt).toLocaleString('en-GB'),
                     Updated: new Date(doc.updatedAt).toLocaleString('en-GB'),

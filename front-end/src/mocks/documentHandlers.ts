@@ -6,6 +6,7 @@ import type {
   Lookup,
 } from '@/features/documents/types.ts'
 import { documentStore } from '@/mocks/documents.ts'
+import { withMockPublicationPermission } from '@/mocks/documentWorkflowHandlers.ts'
 
 type Actor = { id: number; role: Role; departmentId: number | null }
 type Catalogs = {
@@ -25,6 +26,8 @@ const visible = (u: Actor, d: DocumentDetail) =>
     (u.id === d.createdBy || d.assigneeIds.includes(u.id)))
 const editable = (u: Actor, d: DocumentDetail) =>
   visible(u, d) && (u.role !== 'EMPLOYEE' || u.id === d.createdBy)
+
+const reviewSample = 'Sample attachment for document review.\n'
 
 export function createDocumentHandlers(
   base: string,
@@ -168,7 +171,12 @@ export function createDocumentHandlers(
           ? { id: current.id, name: current.name, isActive: current.isActive }
           : { ...lookups[key], isActive: false }
       }
-      return HttpResponse.json({ ...checked.doc, lookups })
+      return HttpResponse.json(
+        withMockPublicationPermission(
+          { ...checked.doc, lookups },
+          checked.user,
+        ),
+      )
     }),
     http.post(`${base}/documents`, async ({ request }) => {
       const user = getUser(request)
@@ -263,9 +271,36 @@ export function createDocumentHandlers(
                     uploadedBy: 'Demo author',
                     uploadedAt: checked.doc.createdAt,
                   },
+                  ...(checked.doc.reviewerId
+                    ? [
+                        {
+                          id: 2,
+                          fileName: 'Review notes.txt',
+                          sizeBytes: reviewSample.length,
+                          contentType: 'text/plain',
+                          uploadedBy: 'Demo author',
+                          uploadedAt: checked.doc.createdAt,
+                          canDownload: true,
+                        },
+                      ]
+                    : []),
                 ]
               : [],
           )
     }),
+    http.get(
+      `${base}/documents/:id/attachments/:fileId/content`,
+      ({ request, params }) => {
+        const checked = authorize(request, String(params.id))
+        if (checked instanceof Response) return checked
+        if (
+          params.fileId !== '2' ||
+          checked.doc.id > 90 ||
+          !checked.doc.reviewerId
+        )
+          return failure(404, 'Attachment not found.')
+        return HttpResponse.text(reviewSample)
+      },
+    ),
   ]
 }
