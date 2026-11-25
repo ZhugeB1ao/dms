@@ -19,6 +19,12 @@ Thumbs.db
 .logs/
 *.pids
 
+# Sao luu staging: khoa/passphrase, ban sao luu va log KHONG BAO GIO duoc commit
+.backup.env
+deploy/staging/backups/
+deploy/staging/logs/
+deploy/staging/.backup.lock
+
 # Node / Frontend build
 node_modules/
 dist/

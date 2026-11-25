@@ -46,6 +46,8 @@ Merge vào main → GitHub Actions (.github/workflows/ci.yml): lint, test
 | `docker-compose.yml` | Chạy staging bằng image kéo từ GHCR |
 | `staging-init/01-create-databases.sql` | Tạo 6 database trong lần chạy đầu (volume còn trống) |
 | `.env.staging.example` | Mẫu biến môi trường. Bản thật `.env.staging` **không commit** |
+| `backup/backup.sh`, `backup/restore.sh` | Sao lưu hằng ngày (PostgreSQL + MinIO, mã hoá, đẩy lên Cloudflare R2, giữ 7 bản) và khôi phục. Xem [BACKUP-RESTORE.md](BACKUP-RESTORE.md) |
+| `backup/com.dms.staging-backup.plist.example` | Tác vụ hẹn giờ macOS chạy sao lưu lúc 12:30 mỗi ngày |
 | `staging-update.sh` | Kéo image mới và khởi động lại service có thay đổi |
 | `com.dms.staging-update.plist.example` | Tác vụ hẹn giờ macOS (launchd) chạy script mỗi 2 phút |
 

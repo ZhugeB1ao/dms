@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Tac vu hen gio cua macOS: chay backup.sh moi ngay luc 12:30.
+  - Neu may dang NGU luc 12:30, macOS se chay bu ngay khi may thuc day.
+  - Neu may TAT han, lan do bi bo lo (khong co ban sao luu hom do).
+  Cach dung:
+    1. Thay moi "/DUONG/DAN/TOI/deploy/staging" bang duong dan that tren may chay staging.
+    2. cp com.dms.staging-backup.plist.example ~/Library/LaunchAgents/com.dms.staging-backup.plist
+    3. launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.dms.staging-backup.plist
+  Chay thu ngay (khong doi 12:30):  launchctl kickstart gui/$(id -u)/com.dms.staging-backup
+  Tat:  launchctl bootout gui/$(id -u)/com.dms.staging-backup
+-->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.dms.staging-backup</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/bash</string>
+        <string>/DUONG/DAN/TOI/deploy/staging/backup/backup.sh</string>
+    </array>
+
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Hour</key>
+        <integer>12</integer>
+        <key>Minute</key>
+        <integer>30</integer>
+    </dict>
+
+    <key>StandardOutPath</key>
+    <string>/DUONG/DAN/TOI/deploy/staging/logs/backup.launchd.out.log</string>
+    <key>StandardErrorPath</key>
+    <string>/DUONG/DAN/TOI/deploy/staging/logs/backup.launchd.err.log</string>
+</dict>
+</plist>
