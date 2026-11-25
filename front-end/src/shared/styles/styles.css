@@ -325,7 +325,8 @@ body:has(dialog[open]) {
 }
 button,
 input,
-select {
+select,
+textarea {
   font: inherit;
 }
 button {
@@ -578,7 +579,8 @@ dialog[open]::backdrop {
   color: #e7e7e7;
 }
 input,
-select {
+select,
+textarea {
   display: block;
   width: 100%;
   min-height: 50px;
@@ -590,15 +592,21 @@ select {
   font-size: 16px;
   transition: border-color 150ms;
 }
-input::placeholder {
+textarea {
+  resize: vertical;
+}
+input::placeholder,
+textarea::placeholder {
   color: #a3a3a3;
 }
 input:hover,
-select:hover {
+select:hover,
+textarea:hover {
   border-color: #808080;
 }
 input[aria-invalid='true'],
-select[aria-invalid='true'] {
+select[aria-invalid='true'],
+textarea[aria-invalid='true'] {
   border-color: #ffa7a7;
 }
 .required-label::after {
