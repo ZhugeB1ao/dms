@@ -2,18 +2,7 @@
 
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **document-management-frontend** (285 symbols, 660 relationships, 21 execution flows).
-
-> Index stale? Run `gitnexus analyze` or `node .gitnexus/run.cjs analyze --index-only` from `front-end/`.
-
-## Always Do
-
-- **MUST run impact analysis before suggesting edits.** Use `impact({target: "symbolName", direction: "upstream"})` (MCP) or `gitnexus impact -r document-management-frontend symbolName` (CLI); report callers, processes, and risk. Never substitute grep for graph analysis.
-- **MUST analyze graph changes before committing.** Use `detect_changes({scope: "all"})` (MCP) or `gitnexus detect-changes -r document-management-frontend` (CLI).
-- **MUST warn the user** if impact analysis returns HIGH or CRITICAL risk before proceeding with proposed solutions.
-- **MUST treat `risk: UNKNOWN` as unresolved, not as low.** Confirm with text search before treating a symbol as safe to change.
-- When exploring unfamiliar code, use `query({search_query: "concept"})` or `gitnexus query -r document-management-frontend "concept"` to find execution flows.
-- When you need full context on a specific symbol — callers, callees, processes — use `context({name: "symbolName"})` or `gitnexus context -r document-management-frontend symbolName`.
+Frontend dùng chung chỉ mục `docs` của checkout này. Áp dụng quy tắc về impact, mức rủi ro và kiểm tra thay đổi trong [AGENTS.md ở gốc](../AGENTS.md). Các lệnh chạy từ `front-end/` nằm ở mục 1.3.
 
 <!-- gitnexus:end -->
 
@@ -27,13 +16,10 @@ Bộ quy tắc này áp dụng cho toàn bộ AI Assistant và Developer khi là
 
 ## 1. NGUYÊN TẮC CỐT LÕI (CORE DIRECTIVES)
 
-### 1.1. CHỈ HƯỚNG DẪN VÀ SINH CODE MẪU — TUYỆT ĐỐI KHÔNG SỬA TRỰC TIẾP
+### 1.1. Phạm vi theo yêu cầu
 
-- **NGHIÊM CẤM** AI tự ý sử dụng các công cụ chỉnh sửa (`edit_file`, `write_file`) để can thiệp trực tiếp vào file mã nguồn của dự án (`src/**`).
-- AI chỉ đóng vai trò **Senior Pair Programmer & Architectural Advisor**:
-  1. Phân tích nguyên nhân gốc rễ (Root Cause Analysis).
-  2. Hướng dẫn giải pháp theo từng bước logic rõ ràng.
-  3. Cung cấp **code mẫu hoàn chỉnh (sample code/snippets)** hoặc **diff chuẩn**, ghi rõ đường dẫn file (`file path`) và vị trí dòng để lập trình viên tự review và tích hợp vào dự án.
+- Khi được yêu cầu review hoặc tư vấn, phân tích và đưa nhận xét kèm vị trí cụ thể. Có thể minh họa bằng diff để người dùng xem xét.
+- Khi được yêu cầu triển khai, sửa lỗi hoặc áp dụng thay đổi, chỉnh trực tiếp các file thuộc phạm vi được giao và kiểm chứng kết quả.
 
 ### 1.2. PLAN KỸ RỒI MỚI LÀM (SUPERPOWERS SKILLS)
 
@@ -50,7 +36,7 @@ Bộ quy tắc này áp dụng cho toàn bộ AI Assistant và Developer khi là
 
 ### 1.3. ĐỌC KỸ GITNEXUS TRƯỚC KHI ĐỀ XUẤT SỬA GÌ (GITNEXUS CODE INTELLIGENCE)
 
-- **BẮT BUỘC** tra cứu GitNexus trước khi đưa ra bất kỳ đề xuất sửa đổi hoặc xóa code nào:
+- Từ `front-end/`, chạy các lệnh sau cho symbol hoặc luồng liên quan trước khi đề xuất thay đổi mã nguồn:
   - Tra cứu ngữ cảnh symbol: `node ../.gitnexus/run.cjs context "<symbol>" --repo docs`
   - Đánh giá mức độ ảnh hưởng: `node ../.gitnexus/run.cjs impact "<symbol>" --direction upstream --repo docs`
   - Tìm kiếm luồng nghiệp vụ: `node ../.gitnexus/run.cjs query "<concept>" --repo docs`
@@ -61,10 +47,11 @@ Bộ quy tắc này áp dụng cho toàn bộ AI Assistant và Developer khi là
 ### 1.4. TRIẾT LÝ PONYTAIL (PONYTAIL SKILL — MINIMALIST & YAGNI)
 
 - **BẮT BUỘC** kích hoạt và áp dụng skill **Ponytail** (`ponytail`, `ponytail-review`, `ponytail-audit`):
-  - **YAGNI (You Aren't Gonna Need It)**: Giải pháp tối giản nhất, ít code nhất nhưng hoạt động chính xác và bền vững nhất (_shortest working diff wins_).
+  - **YAGNI (You Aren't Gonna Need It)**: Chọn cách triển khai dễ đọc, dễ kiểm thử và đủ cho yêu cầu hiện tại.
   - Tận dụng tối đa Standard Web APIs (`flatMap`, `Map`, `Set`, Fetch, `FormData`, `input.validity`, `AbortController`, native `<dialog>`) và những gì có sẵn trong React 19 / dự án.
   - **KHÔNG** tự ý cài thêm thư viện npm mới (như Redux, Zustand, Formik, Yup, Lodash, component library bên thứ ba) khi chưa có sự đồng thuận kiến trúc.
-  - Tránh tạo các lớp bọc (wrapper), abstraction chỉ có 1 nơi dùng (`Rule of Three`) hoặc cờ cấu hình dự phòng cho những trường hợp chưa xảy ra.
+  - Áp dụng Rule of Three khi cân nhắc đưa hành vi vào module dùng chung. Trong một feature, có thể tách logic có trách nhiệm riêng ngay từ lần dùng đầu, ví dụ hàm chuẩn hóa bộ lọc từ URL có thể kiểm thử độc lập.
+  - Tránh thêm wrapper hoặc cờ cấu hình chỉ để dự phòng.
 
 ---
 
@@ -86,25 +73,26 @@ Toàn bộ mã nguồn do AI gợi ý phải nhất quán 100% với phong cách
 ### 2.2. Cấu trúc thư mục chuẩn (`src/`)
 
 - `src/features/<feature-name>/`: Module hóa theo tính năng nghiệp vụ.
-  - `api/`: Các hàm gọi API (ví dụ: `authApi.js`). Xuất dạng object: `export const authApi = { login: ..., me: ... }`.
-  - `components/`: Component giao diện đặc thù của feature (ví dụ: `SignupDemoModal.jsx`).
-  - `context/`: Context & hook nội bộ feature (ví dụ: `AuthProvider.jsx`, `useAuth.js`).
-  - `pages/`: Các trang nghiệp vụ thuộc feature (ví dụ: `AccountPage.jsx`).
-- `src/layouts/`: Khung giao diện dùng chung (`AppLayout/` chứa `AppLayout.jsx`, `Header.jsx`, `Sidebar.jsx`).
-- `src/pages/`: Các trang dùng chung hệ thống (`Workspace.jsx`, `ForbiddenPage.jsx`, `NotFoundPage.jsx`, `ErrorPage.jsx`).
+  - `api/`: Các hàm gọi API (ví dụ: `authApi.ts`). Xuất dạng object: `export const authApi = { login: ..., me: ... }`.
+  - `components/`: Component giao diện đặc thù của feature (ví dụ: `SignupDemoModal.tsx`).
+  - `context/`: Context & hook nội bộ feature (ví dụ: `AuthProvider.tsx`, `useAuth.ts`).
+  - `pages/`: Các trang nghiệp vụ thuộc feature (ví dụ: `AccountPage.tsx`).
+- `src/layouts/`: Khung giao diện dùng chung (`AppLayout/` chứa `AppLayout.tsx`, `Header.tsx`, `Sidebar.tsx`).
+- `src/pages/`: Các trang dùng chung hệ thống (`Workspace.tsx`, `ForbiddenPage.tsx`, `NotFoundPage.tsx`, `ErrorPage.tsx`).
 - `src/shared/`: Tiện ích dùng chung toàn ứng dụng:
-  - `api/http.js`: Quản lý Axios instances (`api`, `authHttp`), singleton `session`, interceptor và hàng đợi `refreshSession()`.
-  - `components/`: Primitives tái sử dụng (`Button.jsx`, `Icons.jsx`).
+  - `api/http.ts`: Quản lý Axios instances (`api`, `authHttp`), singleton `session`, interceptor và hàng đợi `refreshSession()`.
+  - `components/`: Primitives tái sử dụng (`Button.tsx`, `Icons.tsx`).
   - `styles/styles.css`: CSS toàn cục, tiện ích semantic.
-- `src/mocks/`: Mock API với MSW v3 (`handlers.js`, `browser.js`) phục vụ phát triển mock-first độc lập với Backend.
-- `src/app/router/`: Quản lý route (`AppRouter.jsx`) và phân quyền truy cập theo role (`access.js`).
+- `src/mocks/`: Mock API với MSW v3 (`handlers.ts`, `browser.ts`) phục vụ phát triển mock-first độc lập với Backend.
+- `src/app/router/`: Quản lý route (`AppRouter.tsx`) và phân quyền truy cập theo role (`access.ts`).
 
-### 2.3. Quy ước viết mã React 19 & JavaScript
+### 2.3. Quy ước viết mã React 19 & TypeScript
 
 - **Quy tắc đặt tên file**:
-  - React Component: PascalCase (`Button.jsx`, `AppRouter.jsx`, `AccountPage.jsx`).
-  - File logic, hook, helper, config: camelCase (`useAuth.js`, `access.js`, `http.js`, `authApi.js`).
-  - Đuôi mở rộng: `.jsx` cho file có JSX, `.js` cho file logic JS thuần.
+  - React Component: PascalCase (`Button.tsx`, `AppRouter.tsx`, `AccountPage.tsx`).
+  - File logic, hook, helper, config: camelCase (`useAuth.ts`, `access.ts`, `http.ts`, `authApi.ts`).
+  - Đuôi mở rộng: `.tsx` cho file có JSX, `.ts` cho file TypeScript không chứa JSX.
+- Dùng alias `@/` cho import nội bộ trỏ vào `src/`, ví dụ `import Button from '@/shared/components/Button'`. Import thư viện ngoài theo tên package.
 - **React 19 Context**: Sử dụng cú pháp mới `<AuthContext value={{ ... }}>`, tuyệt đối không dùng `<AuthContext.Provider>`.
 - **Xử lý Form & Validation**:
   - Thu thập dữ liệu form tự nhiên bằng `new FormData(event.currentTarget)`.
@@ -128,7 +116,7 @@ Toàn bộ mã nguồn do AI gợi ý phải nhất quán 100% với phong cách
 
 ## 3. CHECKLIST KIỂM DUYỆT TRƯỚC KHI TRẢ LỜI NGƯỜI DÙNG
 
-1. [ ] **Chỉ hướng dẫn / code mẫu**: Không có hành vi tự ý ghi đè file dự án.
+1. [ ] **Phạm vi**: Đã làm đúng yêu cầu review, tư vấn hoặc triển khai ở mục 1.1 chưa?
 2. [ ] **GitNexus**: Đã chạy tra cứu caller, callee, route và blast radius của symbol liên quan chưa?
 3. [ ] **Kế hoạch (Plan)**: Đã phác thảo rõ logic và các bước thực hiện trước khi cung cấp code chưa?
 4. [ ] **Ponytail**: Giải pháp có ngắn gọn, đơn giản, tận dụng platform native và tránh thư viện thừa không?
