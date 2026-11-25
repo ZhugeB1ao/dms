@@ -7,7 +7,7 @@
 -- Chạy trong Neon Console → SQL Editor, bằng role neondb_owner (hoặc role đang sở hữu
 -- bảng, ví dụ baohuy). Chạy lại nhiều lần không sao.
 -- Phần 1 chạy MỘT LẦN cho mỗi database: chọn database trong SQL Editor rồi chạy lại,
--- lần lượt auth_db, account_db, category_db, department_db, organization_db.
+-- lần lượt auth_db, account_db, category_db, department_db, organization_db, document_db.
 -- ==============================================================================
 
 -- 1. Chuyển mọi bảng/sequence do các thành viên tạo về nhóm chung (chạy trong TỪNG database)
@@ -28,7 +28,7 @@ DECLARE m text; d text;
 BEGIN
   FOREACH m IN ARRAY ARRAY['baohuy', 'giabao', 'quocviet', 'kimanh'] LOOP
     CONTINUE WHEN NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = m);
-    FOREACH d IN ARRAY ARRAY['auth_db', 'account_db', 'category_db', 'department_db', 'organization_db'] LOOP
+    FOREACH d IN ARRAY ARRAY['auth_db', 'account_db', 'category_db', 'department_db', 'organization_db', 'document_db'] LOOP
       EXECUTE format('ALTER ROLE %I IN DATABASE %I SET role = dms_owner', m, d);
     END LOOP;
   END LOOP;
