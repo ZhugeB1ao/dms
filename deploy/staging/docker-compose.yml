@@ -71,6 +71,29 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://${DB_HOST:?Thieu DB_HOST trong .env.staging}/organization_db?sslmode=require
       APP_SECURITY_MOCK_ENABLED: "false"
 
+  document-service:
+    <<: *java-service
+    image: ${IMAGE_REGISTRY:-ghcr.io/zhugeb1ao}/dms-document-service:${IMAGE_TAG:-latest}
+    depends_on:
+      category-service:
+        condition: service_started
+      minio:
+        condition: service_started
+    environment:
+      <<: *java-env
+      SERVER_PORT: 8085
+      SPRING_DATASOURCE_URL: jdbc:postgresql://${DB_HOST:?Thieu DB_HOST trong .env.staging}/document_db?sslmode=require
+      CATEGORY_SERVICE_URL: http://category-service:8080
+      # Service noi chuyen voi MinIO qua mang noi bo...
+      MINIO_ENDPOINT: http://minio:9000
+      # ...nhung presigned URL tra cho trinh duyet phai ky theo dia chi cong khai.
+      # Nginx (front-end) chuyen "/<bucket>/..." sang MinIO va giu nguyen Host,
+      # nen chu ky khop. Ten bucket phai trung voi location /attachments/ trong Nginx.
+      MINIO_PUBLIC_ENDPOINT: ${STAGING_ORIGIN:?Thieu STAGING_ORIGIN trong .env.staging}
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:?Thieu MINIO_ROOT_USER trong .env.staging}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:?Thieu MINIO_ROOT_PASSWORD trong .env.staging}
+      MINIO_BUCKET: ${MINIO_BUCKET:-attachments}
+
   api-gateway:
     <<: *app
     image: ${IMAGE_REGISTRY:-ghcr.io/zhugeb1ao}/dms-api-gateway:${IMAGE_TAG:-latest}
@@ -81,6 +104,7 @@ services:
       - category-service
       - department-service
       - organization-service
+      - document-service
     environment:
       SERVER_PORT: 9090
       JAVA_OPTS: "-Xmx256m -Xms64m -XX:+UseG1GC"
@@ -89,6 +113,7 @@ services:
       CATEGORY_SERVICE_URL: http://category-service:8080
       DEPARTMENT_SERVICE_URL: http://department-service:8082
       ORGANIZATION_SERVICE_URL: http://organization-service:8083
+      DOCUMENT_SERVICE_URL: http://document-service:8085
       AUTH_GRPC_HOST: auth-service
       AUTH_GRPC_PORT: 9091
       GATEWAY_SHARED_SECRET: ${GATEWAY_SHARED_SECRET:?Thieu GATEWAY_SHARED_SECRET trong .env.staging}
@@ -118,8 +143,10 @@ services:
     image: ${IMAGE_REGISTRY:-ghcr.io/zhugeb1ao}/dms-front-end:${IMAGE_TAG:-latest}
     depends_on:
       - api-gateway
+      - minio
     environment:
       API_UPSTREAM: http://api-gateway:9090
+      MINIO_UPSTREAM: http://minio:9000
     ports:
       - "127.0.0.1:${FRONTEND_PORT:-8888}:80"
 

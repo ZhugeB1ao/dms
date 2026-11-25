@@ -1,27 +1,34 @@
-import Select from '../../../shared/components/Select.tsx'
+import Select from '@/shared/components/Select.tsx'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
-import Button from '../../../shared/components/Button.tsx'
-import { useAuth } from '../../auth/context/useAuth.ts'
+import Button from '@/shared/components/Button.tsx'
+import { useAuth } from '@/features/auth/context/useAuth.ts'
 import {
   departmentApi,
   type DepartmentItem,
-} from '../../departments/api/departmentApi.ts'
-import { usersApi } from '../api/usersApi.ts'
-import { userError } from '../api/userErrors.ts'
-import type { AccountWrite, ManagedAccount } from '../types.ts'
-import type { Role } from '../../../shared/types/domain.ts'
-import AccountDialog from './AccountDialog.tsx'
-import FormField from './FormField.tsx'
-import { validateForm, focusError, errorAttributes } from './formValidation.ts'
+} from '@/features/departments/api/departmentApi.ts'
+import { usersApi } from '@/features/users/api/usersApi.ts'
+import { userError } from '@/features/users/api/userErrors.ts'
+import type { AccountWrite, ManagedAccount } from '@/features/users/types.ts'
+import type { Role } from '@/shared/types/domain.ts'
+import AccountDialog from '@/features/users/components/AccountDialog.tsx'
+import FormField from '@/shared/components/FormField.tsx'
+import {
+  validateForm,
+  focusError,
+  errorAttributes,
+} from '@/features/users/components/formValidation.ts'
 
 export default function UserFormDialog({
   account,
   onClose,
   onSaved,
+  readOnly = false,
 }: {
   account: ManagedAccount | null
   onClose: () => void
-  onSaved: (account: ManagedAccount, warning?: string) => void
+  onSaved?: (account: ManagedAccount, warning?: string) => void
+  /** Same layout with every input disabled, for viewing an account. */
+  readOnly?: boolean
 }) {
   const auth = useAuth()
   const self = auth.user?.id === String(account?.id)
@@ -104,7 +111,7 @@ export default function UserFormDialog({
       }
       if (!controller.signal.aborted) {
         form.reset()
-        onSaved(saved, warning)
+        onSaved?.(saved, warning)
       }
     } catch (error) {
       if (controller.signal.aborted) return
@@ -124,7 +131,13 @@ export default function UserFormDialog({
 
   return (
     <AccountDialog
-      title={account ? 'Edit account' : 'Create account'}
+      title={
+        readOnly
+          ? 'Account details'
+          : account
+            ? 'Edit account'
+            : 'Create account'
+      }
       pending={pending}
       onClose={onClose}
     >
@@ -143,9 +156,14 @@ export default function UserFormDialog({
         </div>
       )}
       <form ref={formRef} noValidate onSubmit={submit} className="user-form">
-        <fieldset disabled={pending}>
+        <fieldset disabled={pending || readOnly}>
           <div className="user-form-grid">
-            <FormField name="username" label="Username" error={errors.username}>
+            <FormField
+              name="username"
+              label="Username"
+              error={errors.username}
+              required={!readOnly}
+            >
               <input
                 id="username"
                 name="username"
@@ -158,13 +176,18 @@ export default function UserFormDialog({
                 autoComplete="off"
                 {...errorAttributes('username', errors)}
               />
-              {account && (
+              {account && !readOnly && (
                 <p className="text-muted text-sm">
                   The username cannot be changed.
                 </p>
               )}
             </FormField>
-            <FormField name="email" label="Email" error={errors.email}>
+            <FormField
+              name="email"
+              label="Email"
+              error={errors.email}
+              required={!readOnly}
+            >
               <input
                 id="email"
                 name="email"
@@ -189,7 +212,7 @@ export default function UserFormDialog({
                 <option value="MANAGER">Manager</option>
                 <option value="EMPLOYEE">Employee</option>
               </Select>
-              {self && (
+              {self && !readOnly && (
                 <p className="text-muted text-sm">
                   You cannot change your own administrator role.
                 </p>
@@ -199,6 +222,7 @@ export default function UserFormDialog({
               name="departmentId"
               label="Department"
               error={errors.departmentId}
+              required={!readOnly}
             >
               <Select
                 id="departmentId"
@@ -241,6 +265,7 @@ export default function UserFormDialog({
                       : 'Confirm password'
                   }
                   error={errors[name]}
+                  required={!readOnly}
                 >
                   <input
                     id={name}
@@ -264,11 +289,13 @@ export default function UserFormDialog({
         {message && <p role="alert">{message}</p>}
         <div className="user-dialog-actions">
           <Button variant="secondary" disabled={pending} onClick={onClose}>
-            Cancel
+            {readOnly ? 'Close' : 'Cancel'}
           </Button>
-          <Button type="submit" disabled={pending || !departments}>
-            {pending ? 'Saving…' : 'Save account'}
-          </Button>
+          {!readOnly && (
+            <Button type="submit" disabled={pending || !departments}>
+              {pending ? 'Saving…' : 'Save account'}
+            </Button>
+          )}
         </div>
       </form>
     </AccountDialog>

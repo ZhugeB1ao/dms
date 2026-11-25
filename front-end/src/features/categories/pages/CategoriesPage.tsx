@@ -1,4 +1,4 @@
-import Select from '../../../shared/components/Select.tsx'
+import Select from '@/shared/components/Select.tsx'
 import { useCallback, useState } from 'react'
 import {
   ConfirmDeactivateDialog,
@@ -6,14 +6,14 @@ import {
   CrudHeader,
   CrudRowActions,
   CrudToolbar,
-} from '../../../shared/components/CrudPageLayout.tsx'
-import { crudFilterClassName } from '../../../shared/components/crudStyles.ts'
-import { useCrudPage } from '../../../shared/hooks/useCrudPage.ts'
+} from '@/shared/components/CrudPageLayout.tsx'
+import { crudFilterClassName } from '@/shared/components/crudStyles.ts'
+import { useCrudPage } from '@/shared/hooks/useCrudPage.ts'
 import {
   CATEGORY_TYPES,
   categoryApi,
   type CategoryItem,
-} from '../api/categoryApi.ts'
+} from '@/features/categories/api/categoryApi.ts'
 
 export default function CategoriesPage() {
   const [typeFilter, setTypeFilter] = useState('')
@@ -161,8 +161,8 @@ export default function CategoriesPage() {
         onSubmit={crud.handleSubmit}
       >
         <div>
-          <label htmlFor="category-type" className="field-label">
-            Category type *
+          <label htmlFor="category-type" className="field-label required-label">
+            Category type
           </label>
           <Select
             id="category-type"
@@ -183,8 +183,8 @@ export default function CategoriesPage() {
         </div>
 
         <div>
-          <label htmlFor="category-code" className="field-label">
-            Category code *
+          <label htmlFor="category-code" className="field-label required-label">
+            Category code
           </label>
           <input
             id="category-code"
@@ -203,8 +203,8 @@ export default function CategoriesPage() {
         </div>
 
         <div>
-          <label htmlFor="category-name" className="field-label">
-            Category name *
+          <label htmlFor="category-name" className="field-label required-label">
+            Category name
           </label>
           <input
             id="category-name"

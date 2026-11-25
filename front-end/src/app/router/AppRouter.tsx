@@ -1,19 +1,24 @@
 import { Navigate, Outlet, Route, Routes, useLocation } from 'react-router'
-import { useAuth } from '../../features/auth/context/useAuth.ts'
-import AccountPage from '../../features/auth/pages/AccountPage.tsx'
-import UsersPage from '../../features/users/pages/UsersPage.tsx'
-import ProfilePage from '../../features/users/pages/ProfilePage.tsx'
-import CategoriesPage from '../../features/categories/pages/CategoriesPage.tsx'
-import DepartmentsPage from '../../features/departments/pages/DepartmentsPage.tsx'
-import OrganizationsPage from '../../features/organizations/pages/OrganizationsPage.tsx'
-import OcrPage from '../../features/ocr/pages/OcrPage.tsx'
-import ChatPage from '../../features/chat/pages/ChatPage.tsx'
-import AppLayout from '../../layouts/AppLayout/AppLayout.tsx'
-import Workspace from '../../pages/Workspace.tsx'
-import ForbiddenPage from '../../pages/ForbiddenPage.tsx'
-import NotFoundPage from '../../pages/NotFoundPage.tsx'
-import type { Role } from '../../shared/types/domain.ts'
-import { routes, canAccess } from './access.ts'
+import { useAuth } from '@/features/auth/context/useAuth.ts'
+import AccountPage from '@/features/auth/pages/AccountPage.tsx'
+import UsersPage from '@/features/users/pages/UsersPage.tsx'
+import ProfilePage from '@/features/users/pages/ProfilePage.tsx'
+import CategoriesPage from '@/features/categories/pages/CategoriesPage.tsx'
+import DepartmentsPage from '@/features/departments/pages/DepartmentsPage.tsx'
+import OrganizationsPage from '@/features/organizations/pages/OrganizationsPage.tsx'
+import OcrPage from '@/features/ocr/pages/OcrPage.tsx'
+import ChatPage from '@/features/chat/pages/ChatPage.tsx'
+import DocumentsPage from '@/features/documents/pages/DocumentsPage.tsx'
+import DocumentDetailPage from '@/features/documents/pages/DocumentDetailPage.tsx'
+import DossiersPage from '@/features/dossiers/pages/DossiersPage.tsx'
+import DossierDetailPage from '@/features/dossiers/pages/DossierDetailPage.tsx'
+import type { DocumentDirection } from '@/features/documents/types.ts'
+import AppLayout from '@/layouts/AppLayout/AppLayout.tsx'
+import Workspace from '@/pages/Workspace.tsx'
+import ForbiddenPage from '@/pages/ForbiddenPage.tsx'
+import NotFoundPage from '@/pages/NotFoundPage.tsx'
+import type { Role } from '@/shared/types/domain.ts'
+import { routes, canAccess } from '@/app/router/access.ts'
 
 function Guard({ roles }: { roles: Role[] }) {
   const auth = useAuth()
@@ -49,6 +54,7 @@ function Guard({ roles }: { roles: Role[] }) {
 }
 
 export default function AppRouter() {
+  const location = useLocation()
   return (
     <Routes>
       <Route element={<AppLayout />}>
@@ -66,7 +72,24 @@ export default function AppRouter() {
             <Route
               path={route.path}
               element={
-                route.path === '/change-password' ? (
+                route.path === '/documents' ? (
+                  <Navigate
+                    replace
+                    to={{
+                      pathname: '/documents/incoming',
+                      search: location.search,
+                      hash: location.hash,
+                    }}
+                  />
+                ) : route.path.startsWith('/documents/') ? (
+                  <DocumentsPage
+                    direction={
+                      route.path
+                        .split('/')[2]
+                        .toUpperCase() as DocumentDirection
+                    }
+                  />
+                ) : route.path === '/change-password' ? (
                   <AccountPage key="change" mode="change" />
                 ) : route.path === '/admin/departments' ? (
                   <DepartmentsPage />
@@ -78,6 +101,8 @@ export default function AppRouter() {
                   <ProfilePage />
                 ) : route.path === '/admin/categories' ? (
                   <CategoriesPage />
+                ) : route.path === '/records' ? (
+                  <DossiersPage />
                 ) : route.path === '/ocr' ? (
                   <OcrPage />
                 ) : route.path === '/chat' ? (
@@ -89,6 +114,12 @@ export default function AppRouter() {
             />
           </Route>
         ))}
+        <Route element={<Guard roles={['ADMIN', 'MANAGER', 'EMPLOYEE']} />}>
+          <Route path="/documents/:id" element={<DocumentDetailPage />} />
+        </Route>
+        <Route element={<Guard roles={['MANAGER', 'EMPLOYEE']} />}>
+          <Route path="/records/:id" element={<DossierDetailPage />} />
+        </Route>
         <Route path="403" element={<ForbiddenPage />} />
         <Route path="*" element={<NotFoundPage />} />
       </Route>

@@ -1,14 +1,20 @@
 import { http, HttpResponse, delay } from 'msw'
-import type { Role } from '../shared/types/domain.ts'
+import { createDocumentHandlers } from '@/mocks/documentHandlers.ts'
+import { resetDocuments } from '@/mocks/documents.ts'
+import {
+  createDossierHandlers,
+  resetDossiers,
+} from '@/mocks/dossierHandlers.ts'
+import type { Role } from '@/shared/types/domain.ts'
 import type {
   CategoryItem,
   CategoryTypeCode,
-} from '../features/categories/api/categoryApi.ts'
+} from '@/features/categories/api/categoryApi.ts'
 import {
   getForbiddenParentIds,
   type DepartmentItem,
-} from '../features/departments/api/departmentApi.ts'
-import type { OrganizationItem } from '../features/organizations/api/organizationApi.ts'
+} from '@/features/departments/api/departmentApi.ts'
+import type { OrganizationItem } from '@/features/organizations/api/organizationApi.ts'
 
 const base = '/api'
 const key = 'dms-mock-session-v1'
@@ -260,6 +266,8 @@ function save() {
 }
 
 export function resetMock() {
+  resetDocuments()
+  resetDossiers()
   state = null
   accounts = initialAccounts.map((a) => ({ ...a }))
   passwords = {}
@@ -899,9 +907,10 @@ export const coreHandlers = [
     const document = documents[docId]
     if (!document) return fail(404, 'NOT_FOUND', 'Document not found.')
     const allowed =
-      user.role === 'MANAGER'
+      user.role === 'ADMIN' ||
+      (user.role === 'MANAGER'
         ? user.departmentId === document.departmentId
-        : user.role === 'EMPLOYEE' && document.assigneeIds.includes(user.id)
+        : user.role === 'EMPLOYEE' && document.assigneeIds.includes(user.id))
     return allowed
       ? HttpResponse.json(document)
       : fail(
@@ -923,6 +932,15 @@ export const coreHandlers = [
   }),
 ]
 
-export const handlers = [...coreHandlers, ...createMasterDataHandlers(base)]
+export const handlers = [
+  ...coreHandlers,
+  ...createMasterDataHandlers(base),
+  ...createDocumentHandlers(base, userFor, () => ({
+    categories,
+    departments,
+    organizations,
+  })),
+  ...createDossierHandlers(base, userFor),
+]
 
 export const browserHandlers = handlers

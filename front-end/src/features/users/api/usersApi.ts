@@ -1,11 +1,11 @@
-import { api } from '../../../shared/api/http.ts'
+import { api } from '@/shared/api/http.ts'
 import type {
   AccountQuery,
   AccountPageResult,
   AccountWrite,
   CreateAccountInput,
   ManagedAccount,
-} from '../types.ts'
+} from '@/features/users/types.ts'
 
 export const usersApi = {
   list: (params: AccountQuery, signal?: AbortSignal) =>

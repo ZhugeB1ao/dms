@@ -1,14 +1,14 @@
 import { beforeAll, afterAll, afterEach, expect, it } from 'vitest'
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { MemoryRouter } from 'react-router'
+import { MemoryRouter, useLocation, useNavigate } from 'react-router'
 import { setupServer } from 'msw/node'
 import { http, HttpResponse, delay } from 'msw'
-import { handlers, resetMock } from '../mocks/handlers.ts'
-import { session, authHttp } from '../shared/api/http.ts'
-import AuthProvider from '../features/auth/context/AuthProvider.tsx'
-import AppRouter from './router/AppRouter.tsx'
-import { canAccess, safeDestination } from './router/access.ts'
+import { handlers, resetMock } from '@/mocks/handlers.ts'
+import { session, authHttp } from '@/shared/api/http.ts'
+import AuthProvider from '@/features/auth/context/AuthProvider.tsx'
+import AppRouter from '@/app/router/AppRouter.tsx'
+import { canAccess, safeDestination } from '@/app/router/access.ts'
 
 const server = setupServer(...handlers)
 beforeAll(() => server.listen({ onUnhandledFrame: 'error' }))
@@ -75,9 +75,7 @@ it('logs Employee in via username + /auth/me with scoped menu and logs out', asy
   expect(screen.getByRole('complementary', { name: 'Sidebar' })).toBeVisible()
   expect(screen.getByRole('button', { name: 'Close sidebar' })).toBeVisible()
   const nav = screen.getByRole('navigation', { name: 'Navigation' })
-  expect(
-    within(nav).getByRole('link', { name: 'Incoming correspondence' }),
-  ).toBeVisible()
+  expect(within(nav).getByRole('link', { name: 'Documents' })).toBeVisible()
   expect(
     within(nav).getByRole('link', { name: 'OCR & Documents' }),
   ).toBeVisible()
@@ -94,6 +92,75 @@ it('shows 404 for unknown routes', async () => {
   expect(await screen.findByRole('heading', { name: /404/ })).toBeVisible()
 })
 
+function NavigationProbe() {
+  const location = useLocation()
+  const navigate = useNavigate()
+  return (
+    <>
+      <output aria-label="Current URL">
+        {location.pathname + location.search + location.hash}
+      </output>
+      <button onClick={() => navigate(-1)}>Test Back</button>
+    </>
+  )
+}
+
+it('redirects Documents to Incoming, keeps query/hash and replaces history', async () => {
+  const { data } = await authHttp.post('/auth/login', {
+    username: 'admin',
+    password: 'Demo12345!',
+  })
+  session.set(data.accessToken, data.refreshToken)
+  render(
+    <MemoryRouter
+      initialEntries={['/dashboard', '/documents?status=DRAFT&size=20#anchor']}
+      initialIndex={1}
+    >
+      <AuthProvider>
+        <NavigationProbe />
+        <AppRouter />
+      </AuthProvider>
+    </MemoryRouter>,
+  )
+  await screen.findByRole('heading', { name: 'Incoming documents' })
+  await screen.findByRole('table')
+  const url = new URL(
+    screen.getByLabelText('Current URL').textContent!,
+    'http://localhost',
+  )
+  expect(url.pathname).toBe('/documents/incoming')
+  expect(url.searchParams.get('status')).toBe('DRAFT')
+  expect(url.searchParams.get('size')).toBe('20')
+  expect(url.hash).toBe('#anchor')
+  await userEvent.click(screen.getByRole('button', { name: 'Test Back' }))
+  expect(await screen.findByRole('heading', { name: 'Overview' })).toBeVisible()
+})
+
+it('guards the Documents entry for anonymous users', async () => {
+  renderPage('/documents')
+  expect(await screen.findByRole('heading', { name: 'Log in' })).toBeVisible()
+})
+
+it.each(['ADMIN', 'MANAGER', 'EMPLOYEE'])(
+  'retains document return URLs for %s independently of menu visibility',
+  (role) => {
+    for (const path of [
+      '/documents',
+      '/documents/incoming',
+      '/documents/outgoing',
+      '/documents/internal',
+      '/documents/1',
+    ]) {
+      const destination = `${path}?status=DRAFT#anchor`
+      expect(safeDestination(destination, { roles: [role] })).toBe(destination)
+      expect(safeDestination(destination, null)).toBe('/dashboard')
+      expect(safeDestination(destination, { roles: ['UNKNOWN'] })).toBe(
+        '/dashboard',
+      )
+    }
+  },
+)
+
 it('denies unknown roles and external return URLs', () => {
   expect(canAccess({ roles: ['UNKNOWN'] }, ['ADMIN'])).toBe(false)
   expect(safeDestination('//evil.test', { roles: ['ADMIN'] })).toBe(
@@ -103,6 +170,37 @@ it('denies unknown roles and external return URLs', () => {
   expect(safeDestination('/records?q=test', { roles: ['EMPLOYEE'] })).toBe(
     '/records?q=test',
   )
+  expect(
+    safeDestination('/documents/3?tab=history', { roles: ['EMPLOYEE'] }),
+  ).toBe('/documents/3?tab=history')
+  for (const path of [
+    '/documents/0',
+    '/documents/-1',
+    '/documents/3/edit',
+    '/documents/abc',
+    '/documents/999999999999999999999',
+    '/\\evil.test',
+  ])
+    expect(safeDestination(path, { roles: ['ADMIN'] })).toBe('/dashboard')
+  for (const path of [
+    '/documents/incoming',
+    '/documents/outgoing',
+    '/documents/internal',
+  ])
+    expect(safeDestination(path, { roles: ['ADMIN'] })).toBe(path)
+  expect(safeDestination('/records/1?tab=docs', { roles: ['EMPLOYEE'] })).toBe(
+    '/records/1?tab=docs',
+  )
+  expect(safeDestination('/records/1?tab=docs', { roles: ['MANAGER'] })).toBe(
+    '/records/1?tab=docs',
+  )
+  expect(safeDestination('/records/1?tab=docs', { roles: ['ADMIN'] })).toBe(
+    '/dashboard',
+  )
+  for (const path of ['/records/0', '/records/-1', '/records/1/edit'])
+    expect(safeDestination(path, { roles: ['EMPLOYEE'] })).toBe('/dashboard')
+  for (const path of ['/records', '/tasks', '/approvals'])
+    expect(safeDestination(path, { roles: ['ADMIN'] })).toBe('/dashboard')
 })
 
 it.each([

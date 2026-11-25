@@ -2,11 +2,8 @@ import { expect, it } from 'vitest'
 import { screen, within, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse, delay } from 'msw'
-import {
-  renderAccountRoute,
-  featureServer,
-} from '../../../test/userFeature.tsx'
-import { authHttp } from '../../../shared/api/http.ts'
+import { renderAccountRoute, featureServer } from '@/test/userFeature.tsx'
+import { authHttp } from '@/shared/api/http.ts'
 
 it('cancels without disabling and confirms the real lifecycle operation', async () => {
   const user = userEvent.setup()

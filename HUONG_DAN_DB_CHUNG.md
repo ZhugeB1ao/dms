@@ -19,8 +19,9 @@ Toàn bộ database của DMS nằm trên **[Neon](https://neon.tech)** (Postgre
 | category-service | `category_db` |
 | department-service | `department_db` |
 | organization-service | `organization_db` |
+| document-service | `document_db` |
 
-Cả 5 database nằm trên cùng một **branch** Neon. Dev và staging dùng **hai branch khác nhau** (`dev` và `staging`), mỗi branch có host riêng, nên dữ liệu thử ở dev không ảnh hưởng staging.
+Cả 6 database nằm trên cùng một **branch** Neon. Dev và staging dùng **hai branch khác nhau** (`dev` và `staging`), mỗi branch có host riêng, nên dữ liệu thử ở dev không ảnh hưởng staging.
 
 ## Cấu hình kết nối
 
@@ -86,7 +87,7 @@ Neon tạo branch gần như tức thì, có sẵn bản sao dữ liệu của b
 
 1. Tạo project tại https://console.neon.tech: **Postgres 16**, region **AWS Asia Pacific (Singapore)** (gần Việt Nam nhất).
 2. **Roles** → New role, ví dụ `dms`. Lưu mật khẩu vào password manager.
-3. **Databases** → New database, tạo 5 database ở bảng trên, owner là role `dms`.
+3. **Databases** → New database, tạo 6 database ở bảng trên, owner là role `dms`.
 4. **Branches** → New branch từ branch chính, tạo hai branch `dev` và `staging`. Branch con có sẵn role và database của branch cha.
 5. Mỗi branch → **Connect** → tắt *Connection pooling* → lấy host:
    - host của `dev`: gửi cho thành viên (cùng user/mật khẩu) để điền vào `.env`
@@ -130,7 +131,7 @@ Bảng không cần tạo tay: Flyway và Hibernate tự tạo khi service khở
 5. Thêm `document_db` vào danh sách database trong [scripts/neon/fix-ownership.sql](scripts/neon/fix-ownership.sql), để lần chạy sau script cũng xử lý database mới.
 6. Thêm `SPRING_DATASOURCE_URL: jdbc:postgresql://${DB_HOST}/document_db?sslmode=require` cho service đó trong `docker-compose.yml`, `deploy/staging/docker-compose.yml` và `start-dev.sh`.
 
-**Thêm thành viên (mỗi người một role):** Neon đang dùng nhóm `dms_owner` (sở hữu 5 database) và mỗi thành viên một role (`baohuy`, `giabao`, `quocviet`, `kimanh`).
+**Thêm thành viên (mỗi người một role):** Neon đang dùng nhóm `dms_owner` (sở hữu 6 database) và mỗi thành viên một role (`baohuy`, `giabao`, `quocviet`, `kimanh`).
 
 1. Tạo role cho người mới trong Neon Console → Roles, rồi chạy `GRANT dms_owner TO <role>;`.
 2. Thêm tên role vào hai danh sách trong [scripts/neon/fix-ownership.sql](scripts/neon/fix-ownership.sql), rồi chạy script.

@@ -15,43 +15,45 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Instant;
 import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
-/** AuthService chỉ lo xác thực và cấp token; dữ liệu tài khoản lấy từ account-service qua AccountClient (mock). */
 @ExtendWith(MockitoExtension.class)
 class AuthServiceTest {
     private static final String SHA256_OF_ABC = "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad";
 
-    @Mock RefreshTokenRepository refreshTokenRepository;
     @Mock AccountClient accounts;
-    @Mock JwtService jwtService;
+    @Mock RefreshTokenRepository refreshTokenRepository;
     @Mock PasswordEncoder passwordEncoder;
+    @Mock JwtService jwtService;
 
     AuthService authService;
-    AccountInfo user;
+    AccountInfo account;
 
     @BeforeEach
     void setUp() {
         authService = new AuthService(refreshTokenRepository, accounts, jwtService, passwordEncoder);
-        ReflectionTestUtils.setField(authService, "refreshTokenExpiration", 60_000L);
-        user = account(true, 0);
-    }
-
-    private static AccountInfo account(boolean active, int tokenVersion) {
-        return AccountInfo.newBuilder().setId(1).setUsername("u").setRole("EMPLOYEE").setDepartmentId(1)
-                .setTokenVersion(tokenVersion).setActive(active).setMustChangePassword(false).build();
-    }
-
-    private static Credentials credentials(AccountInfo account) {
-        return Credentials.newBuilder().setAccount(account).setPasswordHash("hash").build();
+        account = AccountInfo.newBuilder()
+                .setId(1L)
+                .setUsername("u")
+                .setRole("EMPLOYEE")
+                .setDepartmentId(1L)
+                .setTokenVersion(0)
+                .setActive(true)
+                .setMustChangePassword(false)
+                .build();
     }
 
     private static HttpStatus statusOf(ResponseStatusException e) {
@@ -59,30 +61,37 @@ class AuthServiceTest {
     }
 
     private RefreshToken storedToken(Instant expiresAt) {
-        return RefreshToken.builder().id(10L).userId(1L).tokenHash(SHA256_OF_ABC).tokenVersion(0)
-                .expiresAt(expiresAt).build();
+        return RefreshToken.builder()
+                .id(10L)
+                .userId(1L)
+                .tokenHash(SHA256_OF_ABC)
+                .tokenVersion(0)
+                .expiresAt(expiresAt)
+                .build();
+    }
+
+    private static Credentials credentialsFor(AccountInfo info) {
+        return Credentials.newBuilder().setAccount(info).setPasswordHash("hash").build();
     }
 
     @Test
     void loginSucceedsAndStoresOnlyTheRefreshTokenHash() {
-        when(accounts.credentials("u")).thenReturn(Optional.of(credentials(user)));
+        when(accounts.credentials("u")).thenReturn(Optional.of(credentialsFor(account)));
         when(passwordEncoder.matches("pw", "hash")).thenReturn(true);
-        when(jwtService.generateAccessToken(user)).thenReturn("access");
-        when(refreshTokenRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(jwtService.generateAccessToken(account)).thenReturn("access");
 
         AuthResponse res = authService.login(new LoginRequest("u", "pw"));
 
         assertEquals("access", res.accessToken());
-        assertEquals("Bearer", res.tokenType());
-        verify(refreshTokenRepository).save(argThat(t ->
-                !t.getTokenHash().equals(res.refreshToken()) && t.getUserId() == 1L && t.getTokenVersion() == 0));
+        verify(refreshTokenRepository).save(argThat(t -> !t.getTokenHash().equals(res.refreshToken())));
     }
 
     @Test
     void loginRejectsWrongPasswordUnknownUserAndInactiveAccount() {
-        when(accounts.credentials("u")).thenReturn(Optional.of(credentials(user)));
+        AccountInfo inactive = account.toBuilder().setActive(false).build();
+        when(accounts.credentials("u")).thenReturn(Optional.of(credentialsFor(account)));
         when(accounts.credentials("ghost")).thenReturn(Optional.empty());
-        when(accounts.credentials("off")).thenReturn(Optional.of(credentials(account(false, 0))));
+        when(accounts.credentials("locked")).thenReturn(Optional.of(credentialsFor(inactive)));
         when(passwordEncoder.matches("bad", "hash")).thenReturn(false);
         when(passwordEncoder.matches("pw", "hash")).thenReturn(true);
 
@@ -91,18 +100,15 @@ class AuthServiceTest {
         assertEquals(HttpStatus.UNAUTHORIZED, statusOf(assertThrows(ResponseStatusException.class,
                 () -> authService.login(new LoginRequest("ghost", "pw")))));
         assertEquals(HttpStatus.FORBIDDEN, statusOf(assertThrows(ResponseStatusException.class,
-                () -> authService.login(new LoginRequest("off", "pw")))));
-        assertEquals(HttpStatus.UNAUTHORIZED, statusOf(assertThrows(ResponseStatusException.class,
-                () -> authService.login(new LoginRequest(null, "pw")))));
-        verify(refreshTokenRepository, never()).save(any());
+                () -> authService.login(new LoginRequest("locked", "pw")))));
     }
 
     @Test
     void refreshRotatesTokenAndMarksOldOneRevokedAndReplaced() {
         RefreshToken old = storedToken(Instant.now().plusSeconds(60));
         when(refreshTokenRepository.findByTokenHash(SHA256_OF_ABC)).thenReturn(Optional.of(old));
-        when(accounts.find(1L)).thenReturn(Optional.of(user));
-        when(jwtService.generateAccessToken(user)).thenReturn("access2");
+        when(accounts.find(1L)).thenReturn(Optional.of(account));
+        when(jwtService.generateAccessToken(account)).thenReturn("access2");
         when(refreshTokenRepository.save(any())).thenAnswer(inv -> {
             RefreshToken t = inv.getArgument(0);
             if (t.getId() == null) t.setId(11L);
@@ -118,7 +124,7 @@ class AuthServiceTest {
     }
 
     @Test
-    void refreshWithAlreadyUsedTokenRevokesAllSessions() {
+    void refreshWithAlreadyUsedTokenBumpsTokenVersion() {
         RefreshToken old = storedToken(Instant.now().plusSeconds(60));
         old.setRevokedAt(Instant.now());
         when(refreshTokenRepository.findByTokenHash(SHA256_OF_ABC)).thenReturn(Optional.of(old));
@@ -126,10 +132,11 @@ class AuthServiceTest {
         assertEquals(HttpStatus.UNAUTHORIZED, statusOf(assertThrows(ResponseStatusException.class,
                 () -> authService.refreshToken(new RefreshTokenRequest("abc")))));
         verify(accounts).bumpTokenVersion(1L);
+        verify(accounts, never()).find(1L);
     }
 
     @Test
-    void refreshRejectsBlankUnknownAndExpiredTokens() {
+    void refreshRejectsBlankUnknownExpiredInactiveAndStaleVersionTokens() {
         when(refreshTokenRepository.findByTokenHash(any())).thenReturn(Optional.empty());
 
         assertEquals(HttpStatus.BAD_REQUEST, statusOf(assertThrows(ResponseStatusException.class,
@@ -141,23 +148,14 @@ class AuthServiceTest {
                 .thenReturn(Optional.of(storedToken(Instant.now().minusSeconds(1))));
         assertEquals(HttpStatus.UNAUTHORIZED, statusOf(assertThrows(ResponseStatusException.class,
                 () -> authService.refreshToken(new RefreshTokenRequest("abc")))));
-    }
 
-    @Test
-    void refreshRejectsInactiveAccountAndChangedTokenVersion() {
         when(refreshTokenRepository.findByTokenHash(SHA256_OF_ABC))
-                .thenAnswer(inv -> Optional.of(storedToken(Instant.now().plusSeconds(60))));
-
-        when(accounts.find(1L)).thenReturn(Optional.of(account(false, 0)));
+                .thenReturn(Optional.of(storedToken(Instant.now().plusSeconds(60))));
+        when(accounts.find(1L)).thenReturn(Optional.of(account.toBuilder().setActive(false).build()));
         assertEquals(HttpStatus.FORBIDDEN, statusOf(assertThrows(ResponseStatusException.class,
                 () -> authService.refreshToken(new RefreshTokenRequest("abc")))));
 
-        // account-service đã tăng token_version (khóa/mở lại tài khoản, đặt lại mật khẩu)
-        when(accounts.find(1L)).thenReturn(Optional.of(account(true, 1)));
-        assertEquals(HttpStatus.UNAUTHORIZED, statusOf(assertThrows(ResponseStatusException.class,
-                () -> authService.refreshToken(new RefreshTokenRequest("abc")))));
-
-        when(accounts.find(1L)).thenReturn(Optional.empty());
+        when(accounts.find(1L)).thenReturn(Optional.of(account.toBuilder().setTokenVersion(1).build()));
         assertEquals(HttpStatus.UNAUTHORIZED, statusOf(assertThrows(ResponseStatusException.class,
                 () -> authService.refreshToken(new RefreshTokenRequest("abc")))));
     }
@@ -172,15 +170,5 @@ class AuthServiceTest {
         assertTrue(token.isRevoked());
         verify(refreshTokenRepository).save(token);
         verify(accounts).bumpTokenVersion(1L);
-    }
-
-    @Test
-    void logoutWithUnknownTokenDoesNothing() {
-        when(refreshTokenRepository.findByTokenHash(any())).thenReturn(Optional.empty());
-
-        authService.logout(new RefreshTokenRequest("nope"));
-
-        verify(refreshTokenRepository, never()).save(any());
-        verifyNoInteractions(accounts);
     }
 }

@@ -1,9 +1,9 @@
 import { http, HttpResponse } from 'msw'
 import { setupServer } from 'msw/node'
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest'
-import { session } from '../../../shared/api/http.ts'
-import { chatApi } from '../../chat/api/chatApi.ts'
-import { ocrApi } from './ocrApi.ts'
+import { session } from '@/shared/api/http.ts'
+import { chatApi } from '@/features/chat/api/chatApi.ts'
+import { ocrApi } from '@/features/ocr/api/ocrApi.ts'
 
 const server = setupServer()
 

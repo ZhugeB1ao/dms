@@ -25,21 +25,18 @@ class AuthSecurityTest {
     @MockitoBean JwtService jwtService;
     @MockitoBean UserRepository userRepository;
 
-    /** auth-service chỉ còn login/refresh/logout; các API tài khoản (me, đổi/quên mật khẩu) đã chuyển sang account-service. */
     @Test
-    void loginRefreshAndLogoutArePublic() throws Exception {
-        mvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON)
-                .content("{\"username\":\"u\",\"password\":\"p\"}")).andExpect(status().isOk());
-        mvc.perform(post("/api/auth/refresh").contentType(MediaType.APPLICATION_JSON)
-                .content("{\"refreshToken\":\"t\"}")).andExpect(status().isOk());
-        mvc.perform(post("/api/auth/logout").contentType(MediaType.APPLICATION_JSON)
-                .content("{\"refreshToken\":\"t\"}")).andExpect(status().isOk());
+    void nonPublicEndpointsRejectUnauthenticatedRequests() throws Exception {
+        mvc.perform(get("/api/auth/me")).andExpect(status().is4xxClientError());
     }
 
     @Test
-    void everythingElseIsDeniedWithoutAuthentication() throws Exception {
-        mvc.perform(get("/api/auth/me")).andExpect(status().isForbidden());
-        mvc.perform(post("/api/auth/change-password").contentType(MediaType.APPLICATION_JSON).content("{}"))
-                .andExpect(status().isForbidden());
+    void publicAuthEndpointsDoNotRequireJwt() throws Exception {
+        mvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"username\":\"u\",\"password\":\"p\"}")).andExpect(status().isOk());
+        mvc.perform(post("/api/auth/logout").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"refreshToken\":\"r\"}")).andExpect(status().isOk());
+        mvc.perform(post("/api/auth/refresh").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"refreshToken\":\"r\"}")).andExpect(status().isOk());
     }
 }

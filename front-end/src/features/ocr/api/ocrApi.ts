@@ -1,6 +1,6 @@
-import { env } from '../../../config/env.ts'
-import { refreshSession, session } from '../../../shared/api/http.ts'
-import type { DocumentItem } from '../types.ts'
+import { env } from '@/config/env.ts'
+import { refreshSession, session } from '@/shared/api/http.ts'
+import type { DocumentItem } from '@/features/ocr/types.ts'
 
 function formatFileSize(bytes?: number | string): string {
   if (typeof bytes === 'string') return bytes

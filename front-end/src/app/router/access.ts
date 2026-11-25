@@ -1,18 +1,28 @@
-import type { Role, RouteConfig, User } from '../../shared/types/domain.ts'
+import type { Role, RouteConfig, User } from '@/shared/types/domain.ts'
 
 const staff: Role[] = ['MANAGER', 'EMPLOYEE']
+const docRoles: Role[] = ['ADMIN', ...staff]
 
 export const routes: RouteConfig[] = [
   { path: '/dashboard', label: 'Overview', roles: ['ADMIN', ...staff] },
+  { path: '/documents', label: 'Documents', roles: docRoles },
   {
     path: '/documents/incoming',
     label: 'Incoming correspondence',
-    roles: staff,
+    roles: docRoles,
+    showInSidebar: false,
   },
   {
     path: '/documents/outgoing',
     label: 'Outgoing correspondence',
-    roles: staff,
+    roles: docRoles,
+    showInSidebar: false,
+  },
+  {
+    path: '/documents/internal',
+    label: 'Internal correspondence',
+    roles: docRoles,
+    showInSidebar: false,
   },
   { path: '/records', label: 'Records', roles: staff },
   { path: '/ocr', label: 'OCR & Documents', roles: ['ADMIN', ...staff] },
@@ -20,7 +30,12 @@ export const routes: RouteConfig[] = [
   { path: '/tasks', label: 'My tasks', roles: staff },
   { path: '/approvals', label: 'Pending approvals', roles: ['MANAGER'] },
   { path: '/admin/users', label: 'Users', roles: ['ADMIN'] },
-  { path: '/profile', label: 'Personal profile', roles: ['ADMIN', ...staff] },
+  {
+    path: '/profile',
+    label: 'Personal profile',
+    roles: ['ADMIN', ...staff],
+    showInSidebar: false,
+  },
   { path: '/admin/departments', label: 'Departments', roles: ['ADMIN'] },
   { path: '/admin/organizations', label: 'Organizations', roles: ['ADMIN'] },
   { path: '/admin/categories', label: 'Categories', roles: ['ADMIN'] },
@@ -47,6 +62,21 @@ export function safeDestination(
     value.includes('\\')
   )
     return '/dashboard'
-  const route = routes.find((route) => route.path === value.split(/[?#]/)[0])
+  const path = value.split(/[?#]/)[0]
+  const detail = /^\/documents\/([1-9]\d*)$/.exec(path)
+  if (
+    detail &&
+    Number.isSafeInteger(Number(detail[1])) &&
+    canAccess(user, docRoles)
+  )
+    return value
+  const recordDetail = /^\/records\/([1-9]\d*)$/.exec(path)
+  if (
+    recordDetail &&
+    Number.isSafeInteger(Number(recordDetail[1])) &&
+    canAccess(user, staff)
+  )
+    return value
+  const route = routes.find((route) => route.path === path)
   return route && canAccess(user, route.roles) ? value : '/dashboard'
 }

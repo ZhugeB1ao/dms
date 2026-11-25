@@ -4,9 +4,9 @@ import type {
   Message,
   SidePanelTab,
   SourceCitation,
-} from '../types.ts'
-import { chatApi } from '../api/chatApi.ts'
-import { ChatContext } from './useChat.ts'
+} from '@/features/chat/types.ts'
+import { chatApi } from '@/features/chat/api/chatApi.ts'
+import { ChatContext } from '@/features/chat/context/useChat.ts'
 
 export default function ChatProvider({ children }: { children: ReactNode }) {
   const [sidePanelTab, setSidePanelTab] = useState<SidePanelTab>('hidden')

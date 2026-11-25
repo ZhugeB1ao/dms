@@ -2,10 +2,10 @@ import { beforeAll, afterAll, afterEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
 import { setupServer } from 'msw/node'
-import { handlers, resetMock } from '../mocks/handlers.ts'
-import { authHttp, session } from '../shared/api/http.ts'
-import AuthProvider from '../features/auth/context/AuthProvider.tsx'
-import AppRouter from '../app/router/AppRouter.tsx'
+import { handlers, resetMock } from '@/mocks/handlers.ts'
+import { authHttp, session } from '@/shared/api/http.ts'
+import AuthProvider from '@/features/auth/context/AuthProvider.tsx'
+import AppRouter from '@/app/router/AppRouter.tsx'
 
 export const featureServer = setupServer(...handlers)
 beforeAll(() => featureServer.listen({ onUnhandledFrame: 'error' }))

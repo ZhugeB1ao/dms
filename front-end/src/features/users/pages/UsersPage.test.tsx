@@ -2,10 +2,7 @@ import { expect, it } from 'vitest'
 import { screen, within, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse, delay } from 'msw'
-import {
-  renderAccountRoute,
-  featureServer,
-} from '../../../test/userFeature.tsx'
+import { renderAccountRoute, featureServer } from '@/test/userFeature.tsx'
 
 it('combines filters, resets the current page, and clears filters', async () => {
   const user = userEvent.setup()
@@ -173,4 +170,20 @@ it('clears the search box with Clear filters and explains an empty result', asyn
   await user.click(screen.getByRole('button', { name: 'Clear filters' }))
   expect(box).toHaveValue('')
   expect(await screen.findByText('28 accounts')).toBeVisible()
+})
+it('opens a read-only detail dialog when a row is clicked', async () => {
+  const user = userEvent.setup()
+  await renderAccountRoute()
+  const row = await screen.findByRole('row', { name: /employee@demo.test/ })
+  await user.click(within(row).getByText('employee@demo.test'))
+  const dialog = await screen.findByRole('dialog', { name: 'Account details' })
+  expect(within(dialog).getByLabelText('Email')).toHaveValue(
+    'employee@demo.test',
+  )
+  expect(within(dialog).getByLabelText('Email')).toBeDisabled()
+  expect(
+    within(dialog).queryByRole('button', { name: 'Save account' }),
+  ).toBeNull()
+  await user.click(within(dialog).getByRole('button', { name: 'Close' }))
+  await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
 })

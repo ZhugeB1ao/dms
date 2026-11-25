@@ -1,8 +1,8 @@
 import { beforeAll, afterAll, afterEach, expect, it } from 'vitest'
 import { http, HttpResponse } from 'msw'
 import { setupServer } from 'msw/node'
-import { usersApi } from './usersApi.ts'
-import { session } from '../../../shared/api/http.ts'
+import { usersApi } from '@/features/users/api/usersApi.ts'
+import { session } from '@/shared/api/http.ts'
 
 const server = setupServer()
 beforeAll(() => server.listen({ onUnhandledFrame: 'error' }))

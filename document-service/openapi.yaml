@@ -1,0 +1,915 @@
+openapi: 3.1.0
+info:
+  title: Document Service API
+  description: "Quản lý văn bản (đến, đi, nội bộ). Gọi qua api-gateway với Bearer\
+    \ token."
+  version: "1.0"
+servers:
+- url: http://localhost:9090
+  description: api-gateway
+security:
+- bearerAuth: []
+tags:
+- name: Documents
+  description: "Văn bản đến, đi, nội bộ. Mọi API cần đăng nhập (401). Văn bản khô\
+    ng thuộc quyền xem của người gọi trả 404."
+- name: Attachments
+  description: "Tệp đính kèm văn bản trên MinIO. Upload/thay thế/xóa chỉ áp dụng cho owner khi văn bản còn DRAFT."
+- name: Dossiers
+  description: "Hồ sơ lưu trữ văn bản theo đơn vị và năm. Chỉ MANAGER và EMPLOYEE được phép truy cập (ADMIN trả 403); mọi API cần đăng nhập (401); hồ sơ ngoài đơn vị hoặc không tồn tại trả 404."
+paths:
+  /api/documents/{id}:
+    get:
+      tags:
+      - Documents
+      summary: Chi tiết văn bản
+      operationId: get
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "404":
+          description: "Không có văn bản, đã xóa, hoặc người gọi không được xem"
+    put:
+      tags:
+      - Documents
+      summary: "Sửa bản thảo (thay toàn bộ các trường). Chỉ owner, và chỉ khi còn\
+        \ là DRAFT"
+      operationId: update
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DocumentRequest"
+        required: true
+      responses:
+        "400":
+          description: Như tạo bản thảo
+        "403":
+          description: Xem được nhưng không phải owner
+        "404":
+          description: Không có văn bản hoặc không được xem
+        "409":
+          description: Đã hoàn thành chờ công bố hoặc đã công bố
+    delete:
+      tags:
+      - Documents
+      summary: "Xóa mềm bản thảo (đặt deleted_at). Chỉ owner, và chỉ khi còn là DRAFT"
+      operationId: delete
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "403":
+          description: Xem được nhưng không phải owner
+        "404":
+          description: Không có văn bản hoặc không được xem
+        "409":
+          description: Đã hoàn thành chờ công bố hoặc đã công bố
+        "204":
+          description: No Content
+  /api/documents:
+    get:
+      tags:
+      - Documents
+      summary: "Danh sách văn bản (phân trang, mới nhất trước), lọc theo hướng / trạ\
+        ng thái / loại văn bản / đơn vị; chỉ gồm văn bản người gọi được xem"
+      operationId: list
+      parameters:
+      - name: direction
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - INCOMING
+          - OUTGOING
+          - INTERNAL
+      - name: status
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - DRAFT
+          - PENDING_PUBLICATION
+          - PUBLISHED
+      - name: docTypeId
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int64
+      - name: departmentId
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int64
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 0
+          minimum: 0
+      - name: size
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 20
+          maximum: 100
+          minimum: 1
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/PageResponseDocumentResponse"
+    post:
+      tags:
+      - Documents
+      summary: "Tạo bản thảo (status DRAFT). Owner và đơn vị lấy từ người gọi; loạ\
+        i văn bản, độ khẩn, độ mật phải là danh mục đang hoạt động"
+      operationId: create
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DocumentRequest"
+        required: true
+      responses:
+        "400":
+          description: "Danh mục không tồn tại hoặc ngưng hoạt động, hồ sơ không tồ\
+            n tại, hoặc cột công văn đến dùng cho văn bản không phải INCOMING"
+        "403":
+          description: Hồ sơ thuộc đơn vị khác
+        "409":
+          description: Hồ sơ đã đóng
+        "503":
+          description: Không gọi được category-service
+        "201":
+          description: Created
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/DocumentResponse"
+  /api/documents/{id}/history:
+    get:
+      tags:
+      - Documents
+      summary: "Lịch sử thay đổi của văn bản (cũ nhất trước): hành động, trạng thá\
+        i trước/sau, người thực hiện, thời điểm"
+      operationId: history
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "404":
+          description: Không có văn bản hoặc không được xem
+  /api/documents/{documentId}/attachments:
+    get:
+      tags:
+      - Attachments
+      summary: Danh sách tệp đính kèm của văn bản (mặc định chỉ lấy phiên bản hiện hành)
+      operationId: listAttachments
+      parameters:
+      - name: documentId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      - name: includeHistory
+        in: query
+        required: false
+        schema:
+          type: boolean
+          default: false
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AttachmentResponse"
+        "404":
+          description: Không có văn bản hoặc không được xem
+    post:
+      tags:
+      - Attachments
+      summary: Tải lên tệp đính kèm mới (PDF, PNG, JPEG, WEBP, DOCX, XLSX)
+      operationId: uploadAttachment
+      parameters:
+      - name: documentId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+              - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        "201":
+          description: Created
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/AttachmentResponse"
+        "400":
+          description: Tệp rỗng hoặc tên tệp không hợp lệ
+        "403":
+          description: Không phải owner
+        "404":
+          description: Không có văn bản hoặc không được xem
+        "409":
+          description: Văn bản không còn ở trạng thái DRAFT
+        "413":
+          description: Dung lượng vượt quá giới hạn
+        "415":
+          description: Định dạng hoặc nội dung tệp không được hỗ trợ
+  /api/documents/{documentId}/attachments/{attachmentId}/versions:
+    get:
+      tags:
+      - Attachments
+      summary: Danh sách tất cả phiên bản cùng nhóm tệp đính kèm (mới nhất trước)
+      operationId: versions
+      parameters:
+      - name: documentId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      - name: attachmentId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AttachmentResponse"
+        "404":
+          description: Không có văn bản, không có tệp đính kèm, hoặc không được xem
+  /api/documents/{documentId}/attachments/{attachmentId}/replace:
+    post:
+      tags:
+      - Attachments
+      summary: Thay thế tệp đính kèm bằng phiên bản mới (tăng versionNo, giữ lịch sử phiên bản cũ)
+      operationId: replace
+      parameters:
+      - name: documentId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      - name: attachmentId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+              - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        "201":
+          description: Created
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/AttachmentResponse"
+        "400":
+          description: Tệp rỗng hoặc tên tệp không hợp lệ
+        "403":
+          description: Không phải owner
+        "404":
+          description: Không có văn bản, không có tệp, hoặc không được xem
+        "409":
+          description: Không còn DRAFT hoặc xung đột phiên bản đồng thời
+        "413":
+          description: Dung lượng vượt quá giới hạn
+        "415":
+          description: Định dạng hoặc nội dung tệp không được hỗ trợ
+  /api/documents/{documentId}/attachments/{attachmentId}:
+    delete:
+      tags:
+      - Attachments
+      summary: Xóa tệp đính kèm (xóa toàn bộ các phiên bản trong nhóm)
+      operationId: deleteAttachment
+      parameters:
+      - name: documentId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      - name: attachmentId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "204":
+          description: No Content
+        "403":
+          description: Không phải owner
+        "404":
+          description: Không có văn bản, không có tệp, hoặc không được xem
+        "409":
+          description: Văn bản không còn ở trạng thái DRAFT
+  /api/documents/{documentId}/attachments/{attachmentId}/url:
+    get:
+      tags:
+      - Attachments
+      summary: Tạo presigned GET URL ngắn hạn để xem trước (inline) hoặc tải xuống (attachment)
+      operationId: presignUrl
+      parameters:
+      - name: documentId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      - name: attachmentId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      - name: disposition
+        in: query
+        required: false
+        schema:
+          type: string
+          default: inline
+          enum:
+          - inline
+          - attachment
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/PresignedUrlResponse"
+        "400":
+          description: Tham số disposition không hợp lệ
+        "404":
+          description: Không có văn bản, không có tệp, hoặc không được xem
+  /api/dossiers:
+    get:
+      tags:
+      - Dossiers
+      summary: Danh sách hồ sơ thuộc đơn vị người gọi (phân trang, sắp xếp theo năm giảm dần, id giảm dần)
+      operationId: listDossiers
+      parameters:
+      - name: year
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+      - name: closed
+        in: query
+        required: false
+        schema:
+          type: boolean
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 0
+          minimum: 0
+      - name: size
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 20
+          maximum: 100
+          minimum: 1
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/PageResponseDossierResponse"
+        "403":
+          description: Chỉ MANAGER hoặc EMPLOYEE được phép thao tác hồ sơ
+    post:
+      tags:
+      - Dossiers
+      summary: Tạo mới hồ sơ cho đơn vị người gọi
+      operationId: createDossier
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DossierRequest"
+      responses:
+        "201":
+          description: Created
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/DossierResponse"
+        "400":
+          description: Dữ liệu không hợp lệ
+        "403":
+          description: Chỉ MANAGER hoặc EMPLOYEE được phép thao tác hồ sơ
+        "409":
+          description: Trùng mã hồ sơ trong cùng đơn vị và năm
+  /api/dossiers/{id}:
+    get:
+      tags:
+      - Dossiers
+      summary: Chi tiết hồ sơ thuộc đơn vị người gọi
+      operationId: getDossier
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/DossierResponse"
+        "403":
+          description: Chỉ MANAGER hoặc EMPLOYEE được phép thao tác hồ sơ
+        "404":
+          description: Hồ sơ không tồn tại hoặc thuộc đơn vị khác
+    put:
+      tags:
+      - Dossiers
+      summary: Cập nhật thông tin hồ sơ (chỉ khi hồ sơ chưa đóng)
+      operationId: updateDossier
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DossierRequest"
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/DossierResponse"
+        "400":
+          description: Dữ liệu không hợp lệ
+        "403":
+          description: Chỉ MANAGER hoặc EMPLOYEE được phép thao tác hồ sơ
+        "404":
+          description: Hồ sơ không tồn tại hoặc thuộc đơn vị khác
+        "409":
+          description: Hồ sơ đã đóng hoặc trùng mã hồ sơ trong cùng đơn vị và năm
+  /api/dossiers/{id}/close:
+    post:
+      tags:
+      - Dossiers
+      summary: Đóng hồ sơ lưu trữ
+      operationId: closeDossier
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/DossierResponse"
+        "403":
+          description: Chỉ MANAGER hoặc EMPLOYEE được phép thao tác hồ sơ
+        "404":
+          description: Hồ sơ không tồn tại hoặc thuộc đơn vị khác
+        "409":
+          description: Hồ sơ đã được đóng trước đó
+  /api/dossiers/{id}/documents:
+    get:
+      tags:
+      - Dossiers
+      summary: Danh sách văn bản trong hồ sơ mà người gọi được xem (mới nhất trước)
+      operationId: listDossierDocuments
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DocumentResponse"
+        "403":
+          description: Chỉ MANAGER hoặc EMPLOYEE được phép thao tác hồ sơ
+        "404":
+          description: Hồ sơ không tồn tại hoặc thuộc đơn vị khác
+    post:
+      tags:
+      - Dossiers
+      summary: Gắn văn bản vào hồ sơ (idempotent nếu đã gắn đúng hồ sơ này)
+      operationId: attachDocument
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AttachDocumentRequest"
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/DocumentResponse"
+        "400":
+          description: Thiếu documentId
+        "403":
+          description: Không phải MANAGER/EMPLOYEE hoặc văn bản thuộc đơn vị khác
+        "404":
+          description: Không tìm thấy hồ sơ hoặc không có quyền xem văn bản
+        "409":
+          description: Hồ sơ đã đóng hoặc văn bản đã thuộc hồ sơ khác
+  /api/dossiers/{id}/available-documents:
+    get:
+      tags:
+      - Dossiers
+      summary: Danh sách văn bản cùng đơn vị chưa gắn hồ sơ và người gọi được xem
+      operationId: listAvailableDocuments
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DocumentResponse"
+        "403":
+          description: Chỉ MANAGER hoặc EMPLOYEE được phép thao tác hồ sơ
+        "404":
+          description: Hồ sơ không tồn tại hoặc thuộc đơn vị khác
+  /api/dossiers/{id}/documents/{documentId}:
+    delete:
+      tags:
+      - Dossiers
+      summary: Gỡ văn bản khỏi hồ sơ
+      operationId: detachDocument
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      - name: documentId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "204":
+          description: No Content
+        "403":
+          description: Chỉ MANAGER hoặc EMPLOYEE được phép thao tác hồ sơ
+        "404":
+          description: Không tìm thấy hồ sơ, không xem được văn bản, hoặc văn bản không nằm trong hồ sơ này
+        "409":
+          description: Hồ sơ đã đóng
+components:
+  schemas:
+    AttachmentResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        documentId:
+          type: integer
+          format: int64
+        fileGroupId:
+          type: string
+        fileName:
+          type: string
+        mimeType:
+          type: string
+        fileSize:
+          type: integer
+          format: int64
+        versionNo:
+          type: integer
+          format: int32
+        isCurrent:
+          type: boolean
+        uploadedBy:
+          type: integer
+          format: int64
+        uploadedAt:
+          type: string
+          format: date-time
+    PresignedUrlResponse:
+      type: object
+      properties:
+        url:
+          type: string
+        expiresAt:
+          type: string
+          format: date-time
+        expiresInSeconds:
+          type: integer
+          format: int32
+        disposition:
+          type: string
+    DocumentRequest:
+      type: object
+      properties:
+        direction:
+          type: string
+          enum:
+          - INCOMING
+          - OUTGOING
+          - INTERNAL
+        docTypeId:
+          type: integer
+          format: int64
+        summary:
+          type: string
+          maxLength: 2000
+          minLength: 0
+        urgencyId:
+          type: integer
+          format: int64
+        confidentialityId:
+          type: integer
+          format: int64
+        dossierId:
+          type: integer
+          format: int64
+        incomingNumber:
+          type: string
+          maxLength: 100
+          minLength: 0
+        receivedDate:
+          type: string
+          format: date
+        sender:
+          type: string
+          maxLength: 255
+          minLength: 0
+      required:
+      - confidentialityId
+      - direction
+      - docTypeId
+      - summary
+      - urgencyId
+    DocumentResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        direction:
+          type: string
+          enum:
+          - INCOMING
+          - OUTGOING
+          - INTERNAL
+        docNumber:
+          type: string
+        docTypeId:
+          type: integer
+          format: int64
+        summary:
+          type: string
+        urgencyId:
+          type: integer
+          format: int64
+        confidentialityId:
+          type: integer
+          format: int64
+        departmentId:
+          type: integer
+          format: int64
+        ownerId:
+          type: integer
+          format: int64
+        dossierId:
+          type: integer
+          format: int64
+        status:
+          type: string
+          enum:
+          - DRAFT
+          - PENDING_PUBLICATION
+          - PUBLISHED
+        currentApproverId:
+          type: integer
+          format: int64
+        issueDate:
+          type: string
+          format: date
+        revoked:
+          type: boolean
+        incomingNumber:
+          type: string
+        receivedDate:
+          type: string
+          format: date
+        sender:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+    PageResponseDocumentResponse:
+      type: object
+      properties:
+        content:
+          type: array
+          items:
+            $ref: "#/components/schemas/DocumentResponse"
+        page:
+          type: integer
+          format: int32
+        size:
+          type: integer
+          format: int32
+        totalElements:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
+          format: int32
+    DossierRequest:
+      type: object
+      properties:
+        code:
+          type: string
+          maxLength: 50
+          minLength: 1
+        name:
+          type: string
+          maxLength: 255
+          minLength: 1
+        year:
+          type: integer
+          format: int32
+          maximum: 2100
+          minimum: 1900
+      required:
+      - code
+      - name
+      - year
+    DossierResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        code:
+          type: string
+        name:
+          type: string
+        year:
+          type: integer
+          format: int32
+        departmentId:
+          type: integer
+          format: int64
+        closed:
+          type: boolean
+        documentCount:
+          type: integer
+          format: int64
+        createdAt:
+          type: string
+          format: date-time
+    AttachDocumentRequest:
+      type: object
+      properties:
+        documentId:
+          type: integer
+          format: int64
+      required:
+      - documentId
+    PageResponseDossierResponse:
+      type: object
+      properties:
+        content:
+          type: array
+          items:
+            $ref: "#/components/schemas/DossierResponse"
+        page:
+          type: integer
+          format: int32
+        size:
+          type: integer
+          format: int32
+        totalElements:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
+          format: int32
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

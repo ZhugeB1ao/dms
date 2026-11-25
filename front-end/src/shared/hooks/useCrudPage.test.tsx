@@ -1,6 +1,6 @@
 import { act, renderHook, waitFor } from '@testing-library/react'
 import { expect, it, vi } from 'vitest'
-import { useCrudPage } from './useCrudPage.ts'
+import { useCrudPage } from '@/shared/hooks/useCrudPage.ts'
 
 interface TestItem {
   id: number

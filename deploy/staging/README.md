@@ -9,13 +9,21 @@ staging tự cập nhật sang bản mới trong vài phút.
 Trình duyệt → https://<địa-chỉ-staging>   (Cloudflare Access: chỉ email trong danh sách)
    → Cloudflare Tunnel → máy chạy staging → 127.0.0.1:8888
    → front-end (Nginx)
-        ├─ "/"      → giao diện React
-        └─ "/api/…" → api-gateway → auth / account / category / department / organization
-                                       → Neon (Postgres cloud, branch staging, 5 database) + minio
+        ├─ "/"              → giao diện React
+        ├─ "/attachments/…" → minio (presigned URL xem/tải tệp đính kèm, chỉ GET/HEAD)
+        └─ "/api/…"         → api-gateway → auth / account / category / department /
+                                            organization / document
+                                 → Neon (Postgres cloud, branch staging, 6 database) + minio
 ```
 
 - Chỉ `front-end` mở cổng, và chỉ ở `127.0.0.1`. MinIO, gateway và các service
   không mở cổng nào ra ngoài. Database nằm trên Neon (kết nối ra ngoài qua SSL), không chạy trong Docker.
+  MinIO (tệp đính kèm) vẫn chạy trong Docker.
+- Giới hạn upload là **25 MB** ở cả ba lớp: Nginx (`client_max_body_size`), api-gateway và
+  document-service (`spring.servlet.multipart.*`). Đổi ở một nơi thì đổi cả ba.
+- Presigned URL được ký theo `STAGING_ORIGIN` (biến `MINIO_PUBLIC_ENDPOINT` của
+  document-service). Nginx giữ nguyên header `Host` khi chuyển sang MinIO nên chữ ký khớp.
+  Vì đường dẫn presigned là `/<bucket>/<object>`, `MINIO_BUCKET` phải là `attachments`.
 - Frontend và API dùng chung một địa chỉ (Nginx chuyển `/api` sang gateway), nên không cần
   URL riêng cho backend và không phải xử lý CORS.
 
@@ -36,7 +44,6 @@ Merge vào main → GitHub Actions (.github/workflows/ci.yml): lint, test
 | File | Vai trò |
 |---|---|
 | `docker-compose.yml` | Chạy staging bằng image kéo từ GHCR |
-| `staging-init/01-create-databases.sql` | Tạo 5 database trong lần chạy đầu (volume còn trống) |
 | `.env.staging.example` | Mẫu biến môi trường. Bản thật `.env.staging` **không commit** |
 | `staging-update.sh` | Kéo image mới và khởi động lại service có thay đổi |
 | `com.dms.staging-update.plist.example` | Tác vụ hẹn giờ macOS (launchd) chạy script mỗi 2 phút |
@@ -45,7 +52,7 @@ Merge vào main → GitHub Actions (.github/workflows/ci.yml): lint, test
 
 Yêu cầu: Docker (Docker Desktop trên macOS, bật Rosetta nếu máy chip Apple vì CI build
 image `linux/amd64`), tối thiểu 6 GB RAM cho Docker. Branch `staging` trên Neon đã có
-5 database (xem [HUONG_DAN_DB_CHUNG.md](../../HUONG_DAN_DB_CHUNG.md#dựng-neon-lần-đầu-admin)).
+6 database (xem [HUONG_DAN_DB_CHUNG.md](../../HUONG_DAN_DB_CHUNG.md#dựng-neon-lần-đầu-admin)).
 
 ```bash
 cd deploy/staging
@@ -94,6 +101,17 @@ Trên Linux dùng cron: `*/2 * * * * /duong/dan/toi/deploy/staging/staging-updat
 ```bash
 cd deploy/staging
 DC="docker compose -f docker-compose.yml --env-file .env.staging"
+```
+
+### Thêm document-service vào staging đã chạy từ trước
+
+Tạo database `document_db` trên branch `staging` của Neon một lần (Neon Console → Databases →
+New database, owner là role trong `DB_USERNAME`), rồi bật service. Flyway của document-service
+tự tạo bảng:
+
+```bash
+$DC pull document-service front-end api-gateway
+$DC up -d
 ```
 
 | Việc | Lệnh |

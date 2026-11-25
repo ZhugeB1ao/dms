@@ -3,8 +3,8 @@ import {
   DocumentIcon,
   ExternalLinkIcon,
   EyeIcon,
-} from '../../../shared/components/Icons.tsx'
-import { useChat } from '../context/useChat.ts'
+} from '@/shared/components/Icons.tsx'
+import { useChat } from '@/features/chat/context/useChat.ts'
 
 export function ChatSidePanel() {
   const {

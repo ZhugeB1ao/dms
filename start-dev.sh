@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # ==============================================================================
 # HSU Document Management System - Runner Script Môi Trường Dev Cục Bộ
-# Khởi chạy: FE (Vite) + 6 Microservices (Java/Spring Boot). Database dùng Neon (cloud),
-# cấu hình trong file .env (cp .env.example .env).
+# Khởi chạy: FE (Vite) + 7 Microservices (Java/Spring Boot). Database dùng Neon (cloud),
+# cấu hình trong file .env (cp .env.example .env). MinIO (tệp đính kèm) chạy trong Docker.
 # Loại trừ: OCR (file-service) & AI (ai-service) để tối ưu RAM/CPU.
 # Toàn bộ dịch vụ chạy 100% trong thư mục docs/ độc lập.
 # ==============================================================================
@@ -96,6 +96,28 @@ check_database() {
 }
 
 # ------------------------------------------------------------------------------
+# 3b. Khởi động MinIO (tệp đính kèm của document-service) qua Docker
+# ------------------------------------------------------------------------------
+start_minio() {
+  echo -e "\n${BOLD}${CYAN}=== KHỞI ĐỘNG MINIO TRÊN DOCKER ===${NC}"
+  if ! docker info >/dev/null 2>&1; then
+    echo -e "${YELLOW}[CẢNH BÁO] Docker chưa chạy: bỏ qua MinIO, tính năng tệp đính kèm sẽ không dùng được.${NC}"
+    return 0
+  fi
+  docker compose -f "$DOCS_DIR/docker-compose.yml" up -d minio minio-init
+  echo -n "Đang đợi MinIO"
+  for i in {1..20}; do
+    if nc -z localhost 9000 2>/dev/null; then
+      echo -e " ${GREEN}SẴN SÀNG!${NC} (localhost:9000, console :9001)"
+      return 0
+    fi
+    echo -n "."
+    sleep 1
+  done
+  echo -e " ${YELLOW}chưa thấy cổng 9000, xem: docker compose logs minio${NC}"
+}
+
+# ------------------------------------------------------------------------------
 # 4. Chạy một service Java (dùng JAR nếu có để siêu nhẹ, fallback mvnw)
 # ------------------------------------------------------------------------------
 run_java_service() {
@@ -127,7 +149,7 @@ run_java_service() {
 }
 
 # ------------------------------------------------------------------------------
-# 5. Khởi động 6 dịch vụ Backend Java (chạy trực tiếp trong docs/)
+# 5. Khởi động 7 dịch vụ Backend Java (chạy trực tiếp trong docs/)
 # ------------------------------------------------------------------------------
 start_backend() {
   echo -e "\n${BOLD}${CYAN}=== [2/3] KHỞI ĐỘNG CÁC SERVICE BACKEND (JAVA) ===${NC}"
@@ -187,6 +209,20 @@ start_backend() {
     "APP_SECURITY_MOCK_ENABLED=false" \
     "APP_SECURITY_GATEWAY_SECRET=$gw_secret"
 
+  echo -e "  • Đang chạy ${BOLD}document-service${NC} (Port 8085)..."
+  run_java_service "document" "$DOCS_DIR/document-service" \
+    "SERVER_PORT=8085" \
+    "SPRING_DATASOURCE_URL=$(db_url document_db)" \
+    "SPRING_DATASOURCE_USERNAME=$DB_USERNAME" \
+    "SPRING_DATASOURCE_PASSWORD=$DB_PASSWORD" \
+    "CATEGORY_SERVICE_URL=http://localhost:8080" \
+    "APP_SECURITY_GATEWAY_SECRET=$gw_secret" \
+    "MINIO_ENDPOINT=${MINIO_ENDPOINT:-http://localhost:9000}" \
+    "MINIO_PUBLIC_ENDPOINT=${MINIO_PUBLIC_ENDPOINT:-http://localhost:9000}" \
+    "MINIO_ACCESS_KEY=${MINIO_ROOT_USER:-minioadmin}" \
+    "MINIO_SECRET_KEY=${MINIO_ROOT_PASSWORD:-minioadmin}" \
+    "MINIO_BUCKET=${MINIO_BUCKET:-attachments}"
+
   echo -e "  • Đang chạy ${BOLD}api-gateway${NC} (Port 9090)..."
   run_java_service "gateway" "$DOCS_DIR/api-gateway" \
     "SERVER_PORT=9090" \
@@ -195,12 +231,13 @@ start_backend() {
     "CATEGORY_SERVICE_URL=http://localhost:8080" \
     "DEPARTMENT_SERVICE_URL=http://localhost:8082" \
     "ORGANIZATION_SERVICE_URL=http://localhost:8083" \
+    "DOCUMENT_SERVICE_URL=http://localhost:8085" \
     "AUTH_GRPC_HOST=localhost" \
     "AUTH_GRPC_PORT=9091" \
     "GATEWAY_SHARED_SECRET=$gw_secret"
 
   echo -n "Đang đợi các service backend lắng nghe cổng"
-  local sv_ports=(8080 8081 8082 8083 8084 9090)
+  local sv_ports=(8080 8081 8082 8083 8084 8085 9090)
   for port in "${sv_ports[@]}"; do
     for i in {1..35}; do
       if nc -z localhost "$port" 2>/dev/null; then
@@ -228,7 +265,7 @@ cleanup() {
   fi
 
   # Dọn dẹp triệt để các process con trên cổng dev
-  for port in 8080 8081 8082 8083 8084 9090 5173; do
+  for port in 8080 8081 8082 8083 8084 8085 9090 5173; do
     local p
     p="$(lsof -t -i :"$port" 2>/dev/null || true)"
     if [ -n "$p" ]; then
@@ -256,6 +293,7 @@ start_frontend() {
   echo -e "${GREEN}│${NC} • Category Service:  ${CYAN}http://localhost:8080${NC}                    ${GREEN}│${NC}"
   echo -e "${GREEN}│${NC} • Department Service:${CYAN}http://localhost:8082${NC}                    ${GREEN}│${NC}"
   echo -e "${GREEN}│${NC} • Org Service:       ${CYAN}http://localhost:8083${NC}                    ${GREEN}│${NC}"
+  echo -e "${GREEN}│${NC} • Document Service:  ${CYAN}http://localhost:8085${NC}                    ${GREEN}│${NC}"
   echo -e "${GREEN}│${NC}                                                              ${GREEN}│${NC}"
   echo -e "${GREEN}│${NC} ${YELLOW}Tài khoản test (seed sẵn):${NC}                                   ${GREEN}│${NC}"
   echo -e "${GREEN}│${NC}   - Admin:    ${BOLD}admin${NC}     / ${BOLD}Admin@123${NC}                         ${GREEN}│${NC}"
@@ -275,6 +313,11 @@ start_frontend() {
 cmd_stop() {
   echo -e "${YELLOW}→ Đang dừng toàn bộ service...${NC}"
   cleanup
+  if docker info >/dev/null 2>&1; then
+    # Chỉ dừng MinIO (giữ volume dữ liệu). Chạy trong DOCS_DIR để compose tự đọc .env.
+    (cd "$DOCS_DIR" && docker compose stop minio minio-init >/dev/null 2>&1 || true)
+    echo -e "${GREEN}✓ Đã tắt container MinIO trong Docker.${NC}"
+  fi
 }
 
 # ------------------------------------------------------------------------------
@@ -306,6 +349,8 @@ cmd_status() {
     "8080:Category Service"
     "8082:Department Service"
     "8083:Organization Service"
+    "8085:Document Service"
+    "9000:MinIO Object Storage"
   )
   for item in "${ports[@]}"; do
     local p="${item%%:*}"
@@ -333,6 +378,7 @@ cmd_build() {
     "$DOCS_DIR/category-service"
     "$DOCS_DIR/department-service"
     "$DOCS_DIR/organization-service"
+    "$DOCS_DIR/document-service"
     "$DOCS_DIR/api-gateway"
   )
 
@@ -354,6 +400,7 @@ case "${1:-start}" in
     setup_java
     load_env
     check_database
+    start_minio
     start_backend
     start_frontend
     ;;

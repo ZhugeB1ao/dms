@@ -1,5 +1,7 @@
 # Phân tích nghiệp vụ đề xuất — hệ thống quản lý hồ sơ/công văn
 
+> Cập nhật FE-3 ngày 15/11/2026: người dùng đã chốt Admin có toàn quyền trên các route và mọi đơn vị. Ma trận Admin trong tài liệu lịch sử này đã được thay thế bởi [plan FE-3](../plans/2026-11-14-fe3-document-drafts.md) và [contract documents](../../api/documents-contract.md). Toàn quyền vẫn tuân thủ validation, trạng thái DRAFT và version khi sửa/xóa; backend thật phải thực thi quyền tương ứng.
+
 Ngày: 29/10/2026. Nguồn: tên đề tài và checklist frontend người dùng cung cấp.
 Đây là mô hình làm việc do FE đề xuất khi chưa có tài liệu BE, không phải quy trình
 đã khảo sát hoặc đặc tả pháp lý. Theo yêu cầu mới, không cần BE xác nhận để tiến hành.

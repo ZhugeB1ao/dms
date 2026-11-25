@@ -1,11 +1,15 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
-import Button from '../../../shared/components/Button.tsx'
-import { usersApi } from '../api/usersApi.ts'
-import { userError } from '../api/userErrors.ts'
-import type { ManagedAccount, UserAction } from '../types.ts'
-import AccountDialog from './AccountDialog.tsx'
-import FormField from './FormField.tsx'
-import { validateForm, focusError, errorAttributes } from './formValidation.ts'
+import Button from '@/shared/components/Button.tsx'
+import { usersApi } from '@/features/users/api/usersApi.ts'
+import { userError } from '@/features/users/api/userErrors.ts'
+import type { ManagedAccount, UserAction } from '@/features/users/types.ts'
+import AccountDialog from '@/features/users/components/AccountDialog.tsx'
+import FormField from '@/shared/components/FormField.tsx'
+import {
+  validateForm,
+  focusError,
+  errorAttributes,
+} from '@/features/users/components/formValidation.ts'
 
 const titles = {
   deactivate: 'Deactivate account',

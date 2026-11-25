@@ -4,15 +4,15 @@ import {
   CrudHeader,
   CrudRowActions,
   CrudToolbar,
-} from '../../../shared/components/CrudPageLayout.tsx'
-import { useCrudPage } from '../../../shared/hooks/useCrudPage.ts'
+} from '@/shared/components/CrudPageLayout.tsx'
+import { useCrudPage } from '@/shared/hooks/useCrudPage.ts'
 import {
   buildDepartmentRows,
   departmentApi,
   getForbiddenParentIds,
   type DepartmentItem,
-} from '../api/departmentApi.ts'
-import DepartmentSelect from '../components/DepartmentSelect.tsx'
+} from '@/features/departments/api/departmentApi.ts'
+import DepartmentSelect from '@/features/departments/components/DepartmentSelect.tsx'
 
 const fetchDepartments = (statusFilter: string, signal: AbortSignal) =>
   statusFilter === 'active'
@@ -179,8 +179,11 @@ export default function DepartmentsPage() {
         onSubmit={crud.handleSubmit}
       >
         <div>
-          <label htmlFor="department-code" className="field-label">
-            Department code *
+          <label
+            htmlFor="department-code"
+            className="field-label required-label"
+          >
+            Department code
           </label>
           <input
             id="department-code"
@@ -199,8 +202,11 @@ export default function DepartmentsPage() {
         </div>
 
         <div>
-          <label htmlFor="department-name" className="field-label">
-            Department name *
+          <label
+            htmlFor="department-name"
+            className="field-label required-label"
+          >
+            Department name
           </label>
           <input
             id="department-name"

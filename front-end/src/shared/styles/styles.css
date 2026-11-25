@@ -320,9 +320,6 @@ body {
   margin: 0;
   min-width: 320px;
 }
-body:has(dialog[open]) {
-  overflow: hidden;
-}
 button,
 input,
 select {
@@ -382,9 +379,10 @@ a {
   transition:
     transform var(--duration-sidebar) var(--ease-surface),
     opacity 180ms ease-out,
-    visibility var(--duration-sidebar) allow-discrete;
+    visibility 0s;
 }
 .sidebar--desktop[aria-hidden='true'] {
+  transition-delay: 0s, 0s, var(--duration-sidebar);
   opacity: 0;
   transform: translateX(-100%);
   visibility: hidden;
@@ -519,6 +517,9 @@ dialog {
     display var(--duration-dialog) allow-discrete,
     overlay var(--duration-dialog) allow-discrete;
 }
+dialog:modal {
+  overscroll-behavior: contain;
+}
 dialog[open] {
   opacity: 1;
   transform: none;
@@ -526,6 +527,8 @@ dialog[open] {
 dialog::backdrop {
   background: rgb(0 0 0 / 65%);
   opacity: 0;
+  overflow: hidden;
+  overscroll-behavior: contain;
   transition:
     opacity var(--duration-dialog) ease-out,
     display var(--duration-dialog) allow-discrete,
@@ -533,6 +536,19 @@ dialog::backdrop {
 }
 dialog[open]::backdrop {
   opacity: 1;
+}
+.preview-dialog {
+  transform: translateY(12px) scale(0.98);
+  margin: auto;
+  padding: 0;
+  border: 1px solid #383838;
+  border-radius: 20px;
+  width: min(960px, calc(100% - 32px));
+  max-height: calc(100dvh - 32px);
+  color: #f5f5f5;
+  background: var(--color-sidebar);
+  overflow-y: auto;
+  box-shadow: 0 24px 100px #0008;
 }
 .auth-dialog {
   transform: translateY(12px) scale(0.98);
@@ -600,6 +616,11 @@ input[aria-invalid='true'],
 select[aria-invalid='true'] {
   border-color: #ffa7a7;
 }
+.required-label::after {
+  content: ' *';
+  content: ' *' / ''; /* decorative: the input's `required` already conveys it */
+  color: #f87171;
+}
 .field-error {
   margin-top: 7px;
   color: #ffb4b4;
@@ -637,12 +658,14 @@ select[aria-invalid='true'] {
   background: var(--color-sidebar);
 }
 .auth-dialog[open],
+.preview-dialog[open],
 .sidebar-dialog[open] {
   transform: none;
 }
 /* A native dialog needs a starting style each time it enters the top layer. */
 @starting-style {
-  .auth-dialog[open] {
+  .auth-dialog[open],
+  .preview-dialog[open] {
     opacity: 0;
     transform: translateY(12px) scale(0.98);
   }

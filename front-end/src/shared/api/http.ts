@@ -1,5 +1,5 @@
 import axios from 'axios'
-import { env } from '../../config/env.ts'
+import { env } from '@/config/env.ts'
 
 declare module 'axios' {
   export interface AxiosRequestConfig {
