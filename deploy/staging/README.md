@@ -9,10 +9,18 @@ staging tự cập nhật sang bản mới trong vài phút.
 Trình duyệt → https://<địa-chỉ-staging>   (Cloudflare Access: chỉ email trong danh sách)
    → Cloudflare Tunnel → máy chạy staging → 127.0.0.1:8888
    → front-end (Nginx)
-        ├─ "/"      → giao diện React
-        └─ "/api/…" → api-gateway → auth / account / category / department / organization
-                                       → postgres (1 container, 5 database) + minio
+        ├─ "/"              → giao diện React
+        ├─ "/attachments/…" → minio (presigned URL xem/tải tệp đính kèm, chỉ GET/HEAD)
+        └─ "/api/…"         → api-gateway → auth / account / category / department /
+                                            organization / document
+                                 → postgres (1 container, 6 database) + minio
 ```
+
+- Giới hạn upload là **25 MB** ở cả ba lớp: Nginx (`client_max_body_size`), api-gateway và
+  document-service (`spring.servlet.multipart.*`). Đổi ở một nơi thì đổi cả ba.
+- Presigned URL được ký theo `STAGING_ORIGIN` (biến `MINIO_PUBLIC_ENDPOINT` của
+  document-service). Nginx giữ nguyên header `Host` khi chuyển sang MinIO nên chữ ký khớp.
+  Vì đường dẫn presigned là `/<bucket>/<object>`, `MINIO_BUCKET` phải là `attachments`.
 
 - Chỉ `front-end` mở cổng, và chỉ ở `127.0.0.1`. Postgres, MinIO, gateway và các service
   không mở cổng nào ra ngoài.
@@ -36,7 +44,7 @@ Merge vào main → GitHub Actions (.github/workflows/ci.yml): lint, test
 | File | Vai trò |
 |---|---|
 | `docker-compose.yml` | Chạy staging bằng image kéo từ GHCR |
-| `staging-init/01-create-databases.sql` | Tạo 5 database trong lần chạy đầu (volume còn trống) |
+| `staging-init/01-create-databases.sql` | Tạo 6 database trong lần chạy đầu (volume còn trống) |
 | `.env.staging.example` | Mẫu biến môi trường. Bản thật `.env.staging` **không commit** |
 | `staging-update.sh` | Kéo image mới và khởi động lại service có thay đổi |
 | `com.dms.staging-update.plist.example` | Tác vụ hẹn giờ macOS (launchd) chạy script mỗi 2 phút |
@@ -93,6 +101,19 @@ Trên Linux dùng cron: `*/2 * * * * /duong/dan/toi/deploy/staging/staging-updat
 cd deploy/staging
 DC="docker compose -f docker-compose.yml --env-file .env.staging"
 ```
+
+### Thêm document-service vào staging đã chạy từ trước
+
+`staging-init` chỉ chạy khi volume Postgres còn trống, nên staging cũ chưa có `document_db`.
+Tạo tay một lần rồi bật service (Flyway của document-service tự tạo bảng):
+
+```bash
+$DC exec postgres sh -c 'psql -U "$POSTGRES_USER" -d postgres -c "CREATE DATABASE document_db;"'
+$DC pull document-service front-end api-gateway
+$DC up -d
+```
+
+Nếu dùng Postgres ngoài (ví dụ Neon) thì tạo database `document_db` trên đó.
 
 | Việc | Lệnh |
 |---|---|

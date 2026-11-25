@@ -16,6 +16,7 @@ COPY nginx/default.conf.template /etc/nginx/templates/default.conf.template
 COPY --from=build /app/dist /usr/share/nginx/html
 
 ENV API_UPSTREAM=http://api-gateway:9090
+ENV MINIO_UPSTREAM=http://minio:9000
 
 EXPOSE 80
 HEALTHCHECK --interval=10s --timeout=3s --retries=3 \
