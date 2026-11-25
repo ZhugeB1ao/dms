@@ -39,6 +39,8 @@ log()  { echo "$(date '+%Y-%m-%d %H:%M:%S') $*" | tee -a "$LOG_FILE"; }
 fail() {
   log "LOI: $*"
   osascript -e "display notification \"$*\" with title \"DMS: sao luu that bai\"" >/dev/null 2>&1 || true
+  send_alert "DMS staging: SAO LUU THAT BAI
+$(printf "May: %s\nGio: %s\nLoi: %s\nChi tiet: deploy/staging/logs/backup.log" "$(hostname)" "$(date '+%Y-%m-%d %H:%M:%S')" "$*")"
   exit 1
 }
 

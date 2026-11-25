@@ -30,3 +30,14 @@ env_of() {
 
 # Cau lenh SQL dem so hang moi bang (schema public) -> "ten_bang=so_hang"
 COUNT_SQL="select relname||'='||n from (select relname, (xpath('/row/c/text()', query_to_xml(format('select count(*) as c from %I.%I', schemaname, relname), false, true, '')))[1]::text::int as n from pg_stat_user_tables where schemaname='public') t order by 1;"
+
+# Gui canh bao vao nhom chat (Discord webhook): send_alert "<noi dung>"
+# Khong bao gio lam hong script goi no: thieu URL hoac gui loi thi chi bo qua (tra ve 0).
+send_alert() {
+  [ -n "${ALERT_WEBHOOK_URL:-}" ] || return 0
+  local text json
+  text="$(printf '%s' "$1" | head -c 1800 | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g' | awk 'BEGIN{ORS="\\n"} {print}')"
+  json="{\"username\":\"DMS Backup\",\"content\":\"$text\"}"
+  curl -sS --max-time 15 -H 'Content-Type: application/json' -d "$json" "$ALERT_WEBHOOK_URL" >/dev/null 2>&1 || true
+  return 0
+}

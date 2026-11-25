@@ -36,6 +36,8 @@ chmod 600 .backup.env
 # Tạo passphrase:  openssl rand -hex 32   rồi điền vào BACKUP_PASSPHRASE
 ```
 
+**Cảnh báo vào nhóm chat (Discord):** tạo kênh riêng (ví dụ `#canh-bao-backup`) → Cài đặt kênh → **Tích hợp** → **Webhook** → Sao chép URL, rồi điền vào `ALERT_WEBHOOK_URL` trong `.backup.env`. URL này là bí mật như mật khẩu. Để trống thì chỉ có thông báo macOS trên máy.
+
 > **Quan trọng:** hãy lưu `BACKUP_PASSPHRASE` vào trình quản lý mật khẩu cá nhân, ở nơi KHÁC với bản sao lưu.
 > Mất passphrase nghĩa là **không giải mã được bất kỳ bản sao lưu nào**. File `.backup.env` đã nằm trong
 > `.gitignore`, không bao giờ commit.
@@ -63,7 +65,7 @@ Tắt lịch: `launchctl bootout gui/$(id -u)/com.dms.staging-backup`.
 | Xem log | `tail -30 deploy/staging/logs/backup.log` (mỗi lần chạy kết thúc bằng `HOAN TAT` hoặc `LOI`) |
 | Bản trên máy | `ls -lh deploy/staging/backups/` (tối đa 7 bản) |
 | Bản trên R2 | Cloudflare Dashboard → R2 → `dms-backup`, hoặc `docker run --rm -e MC_HOST_r2=https://KEY:SECRET@<ACCOUNT_ID>.r2.cloudflarestorage.com cgr.dev/chainguard/minio-client:latest ls r2/dms-backup/` |
-| Khi lỗi | macOS hiện thông báo "DMS: sao luu that bai" và dòng `LOI:` trong log |
+| Khi lỗi | Tin **tự gửi vào kênh Discord** của nhóm (tên máy, giờ, nguyên nhân), kèm thông báo macOS "DMS: sao luu that bai" và dòng `LOI:` trong log |
 
 **Mỗi tuần nên chạy thử khôi phục một lần (mục 4.1)** để chắc chắn bản sao lưu còn dùng được.
 
@@ -129,11 +131,13 @@ Chạy ngày 25/11/2026 trên MacBook staging (`restore.sh`, chế độ thử k
 | **Khôi phục từ R2** (`restore.sh --from-r2 latest`) | Tải bản vừa upload về, kiểm tra SHA-256, giải mã, khôi phục vào DB trống | Khớp 100% (14 bảng, 60 hàng), `KET QUA: THANH CONG` |
 | Giữ 7 bản (trên R2) | Tải thêm 8 bản giả cũ lên R2 rồi chạy sao lưu | Còn đúng 7 bản, bản cũ nhất bị xoá |
 | **Chạy qua launchd** (`launchctl kickstart`) | Lịch 12:30 hằng ngày đã được nạp | Chạy thành công trong môi trường của launchd, mã thoát 0 |
+| **Cảnh báo lỗi vào Discord** | Chạy sao lưu với tên project sai để script không thấy container | Script thoát mã 1, tin báo lỗi xuất hiện trong kênh nhóm |
 
 ## 6. Giới hạn và rủi ro
 
 - **Máy tắt hoặc ngủ lâu thì không có bản sao lưu mới.** Nên cắm sạc và để máy không tự ngủ khi chạy staging.
 - **Mất `BACKUP_PASSPHRASE` = mất toàn bộ bản sao lưu.** Luôn cất bản dự phòng ngoài máy.
 - `.env.staging` (mật khẩu Postgres, JWT, MinIO) **không** nằm trong bản sao lưu, phải tự cất trong trình quản lý mật khẩu.
+- **Cảnh báo chỉ hoạt động khi script chạy được.** Máy tắt hẳn thì không có sao lưu và cũng không có tin báo. Nên xem kênh Discord/R2 định kỳ, hoặc thêm dịch vụ "heartbeat" nếu cần.
 - Sao lưu hằng ngày nghĩa là có thể mất tối đa dữ liệu của ~24 giờ gần nhất.
 - Dữ liệu cỡ rất nhỏ hiện nay (vài chục KB). Nếu tệp đính kèm tăng lên hàng GB, cần xem lại dung lượng R2 (gói miễn phí 10 GB).
