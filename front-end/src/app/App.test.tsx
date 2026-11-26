@@ -188,6 +188,17 @@ it('denies unknown roles and external return URLs', () => {
     '/documents/internal',
   ])
     expect(safeDestination(path, { roles: ['ADMIN'] })).toBe(path)
+  expect(safeDestination('/records/1?tab=docs', { roles: ['EMPLOYEE'] })).toBe(
+    '/records/1?tab=docs',
+  )
+  expect(safeDestination('/records/1?tab=docs', { roles: ['MANAGER'] })).toBe(
+    '/records/1?tab=docs',
+  )
+  expect(safeDestination('/records/1?tab=docs', { roles: ['ADMIN'] })).toBe(
+    '/dashboard',
+  )
+  for (const path of ['/records/0', '/records/-1', '/records/1/edit'])
+    expect(safeDestination(path, { roles: ['EMPLOYEE'] })).toBe('/dashboard')
   for (const path of ['/records', '/tasks', '/approvals'])
     expect(safeDestination(path, { roles: ['ADMIN'] })).toBe('/dashboard')
 })

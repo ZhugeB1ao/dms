@@ -50,7 +50,7 @@ it('returns to filtered inbox after rejecting a document with a reason', async (
     await screen.findByRole('link', { name: 'Review Outgoing document 31' }),
   )
   await user.click(await screen.findByRole('tab', { name: 'Attachments' }))
-  await screen.findByRole('button', { name: 'Download Review notes.txt' })
+  await screen.findByText('Sample document.pdf')
   await user.click(await screen.findByRole('button', { name: 'Reject' }))
   const dialog = screen.getByRole('dialog', { name: 'Reject document' })
   const reason = within(dialog).getByRole('textbox', { name: /reason/i })

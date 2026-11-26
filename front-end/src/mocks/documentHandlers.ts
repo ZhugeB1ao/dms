@@ -1,12 +1,40 @@
 import { http, HttpResponse, passthrough } from 'msw'
 import type { Role } from '@/shared/types/domain.ts'
 import type {
+  DocumentAttachment,
   DocumentDetail,
   DraftInput,
   Lookup,
 } from '@/features/documents/types.ts'
+import {
+  isPreviewableMime,
+  MAX_ATTACHMENT_BYTES,
+  resolveAttachmentMime,
+} from '@/features/documents/api/attachmentsApi.ts'
 import { documentStore } from '@/mocks/documents.ts'
 import { withMockPublicationPermission } from '@/mocks/documentWorkflowHandlers.ts'
+import { dossierStore } from '@/mocks/dossierHandlers.ts'
+
+const SAMPLE_PDF_DATA_URL =
+  'data:application/pdf;base64,JVBERi0xLjQKMSAwIG9iajw8Pj5lbmRvYmoKdHJhaWxlcjw8Pj4KJSVFT0Y='
+const SAMPLE_IMAGE_DATA_URL =
+  'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII='
+
+type UploadedFileLike = {
+  name?: string
+  size: number
+  type?: string
+  arrayBuffer: () => Promise<ArrayBuffer>
+}
+
+function bytesToDataUrl(buffer: ArrayBuffer, mimeType: string): string {
+  const bytes = new Uint8Array(buffer)
+  let binary = ''
+  for (let i = 0; i < bytes.length; i += 8192) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + 8192))
+  }
+  return `data:${mimeType};base64,${btoa(binary)}`
+}
 
 type Actor = { id: number; role: Role; departmentId: number | null }
 type Catalogs = {
@@ -27,7 +55,24 @@ const visible = (u: Actor, d: DocumentDetail) =>
 const editable = (u: Actor, d: DocumentDetail) =>
   visible(u, d) && (u.role !== 'EMPLOYEE' || u.id === d.createdBy)
 
-const reviewSample = 'Sample attachment for document review.\n'
+function withDossier(doc: DocumentDetail): DocumentDetail {
+  const dossier = doc.dossierId
+    ? dossierStore.dossiers.find((d) => d.id === doc.dossierId)
+    : undefined
+  return {
+    ...doc,
+    dossierId: doc.dossierId ?? null,
+    dossier: dossier
+      ? {
+          id: dossier.id,
+          code: dossier.code,
+          name: dossier.name,
+          year: dossier.year,
+          closed: dossier.closed,
+        }
+      : null,
+  }
+}
 
 export function createDocumentHandlers(
   base: string,
@@ -42,6 +87,26 @@ export function createDocumentHandlers(
     if (!visible(user, doc))
       return failure(403, 'You do not have permission to view this document.')
     return { user, doc }
+  }
+  function authorizeAttachmentWrite(request: Request, id: string) {
+    const checked = authorize(request, id)
+    if (checked instanceof Response) return checked
+    if (!editable(checked.user, checked.doc))
+      return failure(403, 'You do not have permission to manage attachments.')
+    if (checked.doc.status !== 'DRAFT')
+      return failure(
+        409,
+        'Attachments can only be changed while the document is in DRAFT status.',
+      )
+    return checked
+  }
+  function findAttachment(docId: number, rawAttachmentId: string) {
+    const list = documentStore.attachments.get(docId) ?? []
+    const attachmentId = Number(rawAttachmentId)
+    const target = Number.isSafeInteger(attachmentId)
+      ? list.find((item) => item.id === attachmentId)
+      : undefined
+    return { list, target }
   }
   function validate(
     body: Record<string, unknown>,
@@ -96,6 +161,41 @@ export function createDocumentHandlers(
       body.departmentId !== (old?.departmentId ?? user.departmentId)
     )
       return failure(403, 'You cannot change the responsible department.')
+    const rawDossierId = body.dossierId
+    if (
+      rawDossierId !== undefined &&
+      rawDossierId !== null &&
+      (typeof rawDossierId !== 'number' ||
+        !Number.isSafeInteger(rawDossierId) ||
+        rawDossierId <= 0)
+    )
+      return failure(400, 'Selected record is invalid.')
+    const nextDossierId =
+      rawDossierId === undefined || rawDossierId === null ? null : rawDossierId
+    const prevDossierId = old?.dossierId ?? null
+    if (nextDossierId !== prevDossierId && prevDossierId !== null) {
+      const prevDossier = dossierStore.dossiers.find(
+        (d) => d.id === prevDossierId,
+      )
+      if (prevDossier?.closed)
+        return failure(
+          409,
+          'Cannot move or detach a document from a closed record.',
+        )
+    }
+    if (nextDossierId !== null) {
+      const nextDossier = dossierStore.dossiers.find(
+        (d) => d.id === nextDossierId,
+      )
+      if (!nextDossier) return failure(400, 'Selected record does not exist.')
+      if (nextDossier.departmentId !== lookups.department.id)
+        return failure(
+          403,
+          'Selected record belongs to a different department.',
+        )
+      if (nextDossierId !== prevDossierId && nextDossier.closed)
+        return failure(409, 'Cannot attach document to a closed record.')
+    }
     return {
       direction: body.direction as DraftInput['direction'],
       summary,
@@ -104,6 +204,7 @@ export function createDocumentHandlers(
       confidentialityId: lookups.confidentiality.id,
       issuingOrganizationId: lookups.issuingOrganization.id,
       departmentId: lookups.department.id,
+      dossierId: nextDossierId,
       documentTypeName: lookups.documentType.name,
       issuingOrganizationName: lookups.issuingOrganization.name,
       departmentName: lookups.department.name,
@@ -173,7 +274,7 @@ export function createDocumentHandlers(
       }
       return HttpResponse.json(
         withMockPublicationPermission(
-          { ...checked.doc, lookups },
+          withDossier({ ...checked.doc, lookups }),
           checked.user,
         ),
       )
@@ -209,7 +310,7 @@ export function createDocumentHandlers(
           occurredAt: now,
         },
       ])
-      return HttpResponse.json(doc, { status: 201 })
+      return HttpResponse.json(withDossier(doc), { status: 201 })
     }),
     http.put(`${base}/documents/:id`, async ({ request, params }) => {
       const checked = authorize(request, String(params.id))
@@ -231,7 +332,7 @@ export function createDocumentHandlers(
         version: doc.version + 1,
         updatedAt: new Date().toISOString(),
       })
-      return HttpResponse.json(doc)
+      return HttpResponse.json(withDossier(doc))
     }),
     http.delete(`${base}/documents/:id`, ({ request, params }) => {
       const checked = authorize(request, String(params.id))
@@ -248,6 +349,7 @@ export function createDocumentHandlers(
         (d) => d.id !== doc.id,
       )
       documentStore.histories.delete(doc.id)
+      documentStore.attachments.delete(doc.id)
       return new HttpResponse(null, { status: 204 })
     }),
     http.get(`${base}/documents/:id/history`, ({ request, params }) => {
@@ -258,49 +360,235 @@ export function createDocumentHandlers(
     }),
     http.get(`${base}/documents/:id/attachments`, ({ request, params }) => {
       const checked = authorize(request, String(params.id))
-      return checked instanceof Response
-        ? checked
-        : HttpResponse.json(
-            checked.doc.id <= 90
-              ? [
-                  {
-                    id: 1,
-                    fileName: 'Sample document.pdf',
-                    sizeBytes: 2048,
-                    contentType: 'application/pdf',
-                    uploadedBy: 'Demo author',
-                    uploadedAt: checked.doc.createdAt,
-                  },
-                  ...(checked.doc.reviewerId
-                    ? [
-                        {
-                          id: 2,
-                          fileName: 'Review notes.txt',
-                          sizeBytes: reviewSample.length,
-                          contentType: 'text/plain',
-                          uploadedBy: 'Demo author',
-                          uploadedAt: checked.doc.createdAt,
-                          canDownload: true,
-                        },
-                      ]
-                    : []),
-                ]
-              : [],
-          )
+      if (checked instanceof Response) return checked
+      const current = (
+        documentStore.attachments.get(checked.doc.id) ?? []
+      ).filter((item) => item.isCurrent)
+      return HttpResponse.json(current)
     }),
     http.get(
-      `${base}/documents/:id/attachments/:fileId/content`,
+      `${base}/documents/:id/attachments/:attachmentId/versions`,
       ({ request, params }) => {
         const checked = authorize(request, String(params.id))
         if (checked instanceof Response) return checked
-        if (
-          params.fileId !== '2' ||
-          checked.doc.id > 90 ||
-          !checked.doc.reviewerId
+        const { list, target } = findAttachment(
+          checked.doc.id,
+          String(params.attachmentId),
         )
-          return failure(404, 'Attachment not found.')
-        return HttpResponse.text(reviewSample)
+        if (!target) return failure(404, 'Attachment not found.')
+        return HttpResponse.json(
+          list
+            .filter((item) => item.fileGroupId === target.fileGroupId)
+            .sort((a, b) => b.versionNo - a.versionNo),
+        )
+      },
+    ),
+    http.post(
+      `${base}/documents/:id/attachments`,
+      async ({ request, params }) => {
+        const checked = authorizeAttachmentWrite(request, String(params.id))
+        if (checked instanceof Response) return checked
+        const uploaded = await readUploadedAttachment(request)
+        if (uploaded instanceof Response) return uploaded
+        const id = documentStore.nextAttachmentId++
+        const created: DocumentAttachment = {
+          id,
+          documentId: checked.doc.id,
+          fileGroupId: `group-${id}`,
+          fileName: uploaded.fileName,
+          mimeType: uploaded.mimeType,
+          fileSize: uploaded.fileSize,
+          versionNo: 1,
+          isCurrent: true,
+          uploadedBy: checked.user.id,
+          uploadedAt: new Date().toISOString(),
+        }
+        const list = documentStore.attachments.get(checked.doc.id) ?? []
+        list.push(created)
+        documentStore.attachments.set(checked.doc.id, list)
+        documentStore.attachmentDataUrls.set(id, uploaded.dataUrl)
+        return HttpResponse.json(created, { status: 201 })
+      },
+    ),
+    http.post(
+      `${base}/documents/:id/attachments/:attachmentId/replace`,
+      async ({ request, params }) => {
+        const checked = authorizeAttachmentWrite(request, String(params.id))
+        if (checked instanceof Response) return checked
+        const { list, target } = findAttachment(
+          checked.doc.id,
+          String(params.attachmentId),
+        )
+        if (!target) return failure(404, 'Attachment not found.')
+        const uploaded = await readUploadedAttachment(request)
+        if (uploaded instanceof Response) return uploaded
+        let maxVersion = 0
+        for (const item of list) {
+          if (item.fileGroupId === target.fileGroupId) {
+            maxVersion = Math.max(maxVersion, item.versionNo)
+            item.isCurrent = false
+          }
+        }
+        const id = documentStore.nextAttachmentId++
+        const created: DocumentAttachment = {
+          id,
+          documentId: checked.doc.id,
+          fileGroupId: target.fileGroupId,
+          fileName: uploaded.fileName,
+          mimeType: uploaded.mimeType,
+          fileSize: uploaded.fileSize,
+          versionNo: maxVersion + 1,
+          isCurrent: true,
+          uploadedBy: checked.user.id,
+          uploadedAt: new Date().toISOString(),
+        }
+        list.push(created)
+        documentStore.attachments.set(checked.doc.id, list)
+        documentStore.attachmentDataUrls.set(id, uploaded.dataUrl)
+        return HttpResponse.json(created, { status: 201 })
+      },
+    ),
+    http.delete(
+      `${base}/documents/:id/attachments/:attachmentId`,
+      ({ request, params }) => {
+        const checked = authorizeAttachmentWrite(request, String(params.id))
+        if (checked instanceof Response) return checked
+        const { list, target } = findAttachment(
+          checked.doc.id,
+          String(params.attachmentId),
+        )
+        if (!target) return failure(404, 'Attachment not found.')
+        documentStore.attachments.set(
+          checked.doc.id,
+          list.filter((item) => {
+            if (item.fileGroupId === target.fileGroupId) {
+              documentStore.attachmentDataUrls.delete(item.id)
+              return false
+            }
+            return true
+          }),
+        )
+        return new HttpResponse(null, { status: 204 })
+      },
+    ),
+    http.get(
+      `${base}/documents/:id/attachments/:attachmentId/url`,
+      ({ request, params }) => {
+        const checked = authorize(request, String(params.id))
+        if (checked instanceof Response) return checked
+        const { target } = findAttachment(
+          checked.doc.id,
+          String(params.attachmentId),
+        )
+        if (!target) return failure(404, 'Attachment not found.')
+        const rawDisposition =
+          new URL(request.url).searchParams.get('disposition') ?? 'inline'
+        if (rawDisposition !== 'inline' && rawDisposition !== 'attachment') {
+          return failure(400, 'Invalid disposition.')
+        }
+        const disposition =
+          rawDisposition === 'inline' && !isPreviewableMime(target.mimeType)
+            ? 'attachment'
+            : rawDisposition
+        const url =
+          documentStore.attachmentDataUrls.get(target.id) ??
+          (target.mimeType === 'application/pdf'
+            ? SAMPLE_PDF_DATA_URL
+            : target.mimeType.startsWith('image/')
+              ? SAMPLE_IMAGE_DATA_URL
+              : `data:${target.mimeType};charset=utf-8,attachment-${target.id}`)
+        const expiresInSeconds = 300
+        return HttpResponse.json({
+          url,
+          expiresAt: new Date(
+            Date.now() + expiresInSeconds * 1000,
+          ).toISOString(),
+          expiresInSeconds,
+          disposition,
+        })
       },
     ),
   ]
+}
+
+async function parseMultipartFile(
+  request: Request,
+  fieldName = 'file',
+): Promise<UploadedFileLike | null> {
+  const contentType = request.headers.get('content-type') ?? ''
+  const match = /boundary=(?:"([^"]+)"|([^;\s]+))/i.exec(contentType)
+  if (!match) return null
+  const boundary = match[1] || match[2]
+  const bytes = new Uint8Array(await request.arrayBuffer())
+  const raw = new TextDecoder('latin1').decode(bytes)
+  const marker = `--${boundary}`
+  let pos = raw.indexOf(marker)
+  while (pos !== -1) {
+    pos += marker.length
+    if (raw.startsWith('--', pos)) break
+    if (raw.startsWith('\r\n', pos)) pos += 2
+    const headerEnd = raw.indexOf('\r\n\r\n', pos)
+    if (headerEnd === -1) break
+    const headerText = new TextDecoder('utf-8').decode(
+      bytes.subarray(pos, headerEnd),
+    )
+    const bodyStart = headerEnd + 4
+    const nextBoundary = raw.indexOf(`\r\n${marker}`, bodyStart)
+    if (nextBoundary === -1) break
+    const nameMatch = /\bname="([^"]+)"/i.exec(headerText)
+    if (nameMatch?.[1] === fieldName) {
+      const fileMatch = /\bfilename="([^"]*)"/i.exec(headerText)
+      const typeMatch = /^content-type:\s*([^\r\n;]+)/im.exec(headerText)
+      const slice = bytes.slice(bodyStart, nextBoundary)
+      return {
+        name: fileMatch?.[1] ?? 'attachment',
+        size: slice.byteLength,
+        type: typeMatch?.[1]?.trim() ?? '',
+        arrayBuffer: async () => slice.buffer,
+      }
+    }
+    pos = nextBoundary + 2
+  }
+  return null
+}
+
+async function readUploadedAttachment(request: Request) {
+  let file: UploadedFileLike | null = null
+  try {
+    const formData = await request.clone().formData()
+    const entry = formData.get('file')
+    if (
+      entry &&
+      typeof entry !== 'string' &&
+      typeof (entry as UploadedFileLike).size === 'number'
+    ) {
+      file = entry as UploadedFileLike
+    }
+  } catch {
+    file = await parseMultipartFile(request, 'file')
+  }
+  if (!file) {
+    return failure(400, 'File is required.')
+  }
+  if (file.size <= 0) {
+    return failure(400, 'File must not be empty.')
+  }
+  if (file.size > MAX_ATTACHMENT_BYTES) {
+    return failure(413, 'File exceeds the 10 MB limit.')
+  }
+  const fileName = file.name || 'attachment'
+  const mimeType = resolveAttachmentMime(fileName, file.type ?? '')
+  if (!mimeType) {
+    return failure(
+      415,
+      'Unsupported file type. Allowed: PDF, PNG, JPG, WEBP, DOCX, XLSX.',
+    )
+  }
+  const buffer = await file.arrayBuffer()
+  return {
+    fileName,
+    mimeType,
+    fileSize: file.size,
+    dataUrl: bytesToDataUrl(buffer, mimeType),
+  }
 }

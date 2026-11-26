@@ -25,6 +25,7 @@ export interface DraftInput {
   confidentialityId: number
   issuingOrganizationId: number
   departmentId: number
+  dossierId?: number | null
 }
 export interface DocumentSummary extends DraftInput {
   id: number
@@ -45,6 +46,13 @@ export interface DocumentDetail extends DocumentSummary {
   submittedByName?: string
   documentNumber?: string
   canPublish?: boolean
+  dossier?: {
+    id: number
+    code: string
+    name: string
+    year: number
+    closed: boolean
+  } | null
   lookups: Record<
     | 'documentType'
     | 'urgency'
@@ -80,12 +88,15 @@ export interface StatusHistoryEntry {
 }
 export interface DocumentAttachment {
   id: number
+  documentId: number
+  fileGroupId: string
   fileName: string
-  sizeBytes: number
-  contentType: string
-  uploadedBy: string
+  mimeType: string
+  fileSize: number
+  versionNo: number
+  isCurrent: boolean
+  uploadedBy: number
   uploadedAt: string
-  canDownload?: boolean
 }
 
 export type WorkflowCommand = { version: number } & (
@@ -112,4 +123,10 @@ export interface PendingApprovals extends Omit<DocumentPage, 'content'> {
     submittedAt: string
   })[]
   pendingCount: number
+}
+export interface AttachmentSignedUrl {
+  url: string
+  expiresAt: string
+  expiresInSeconds: number
+  disposition: 'inline' | 'attachment'
 }

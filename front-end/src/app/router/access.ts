@@ -81,6 +81,13 @@ export function safeDestination(
     canAccess(user, docRoles)
   )
     return value
+  const recordDetail = /^\/records\/([1-9]\d*)$/.exec(path)
+  if (
+    recordDetail &&
+    Number.isSafeInteger(Number(recordDetail[1])) &&
+    canAccess(user, staff)
+  )
+    return value
   const route = routes.find((route) => route.path === path)
   return route && canAccess(user, route.roles) ? value : '/dashboard'
 }

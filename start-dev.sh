@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # ==============================================================================
 # HSU Document Management System - Runner Script Môi Trường Dev Cục Bộ
-# Khởi chạy: FE (Vite) + 6 Microservices (Java/Spring Boot) + 5 Databases (Docker)
-# Loại trừ: OCR (file-service) & AI (ai-service) để tối ưu RAM/CPU.
+# Khởi chạy: FE (Vite) + 7 Microservices (Java/Spring Boot) + 6 Databases (Docker)
+# Loại trừ: OCR & AI (ai-service) để tối ưu RAM/CPU.
 # Toàn bộ dịch vụ chạy 100% trong thư mục docs/ độc lập.
 # ==============================================================================
 
@@ -76,9 +76,10 @@ check_docker() {
 start_databases() {
   echo -e "\n${BOLD}${CYAN}=== [1/3] KHỞI ĐỘNG CÁC DATABASE TRÊN DOCKER ===${NC}"
   docker compose -f "$COMPOSE_FILE" up -d
+  docker compose -f "$DOCS_DIR/docker-compose.yml" up -d minio minio-init
 
-  echo -n "Đang kiểm tra kết nối PostgreSQL"
-  local ports=(5433 5434 5435 5436 5437)
+  echo -n "Đang kiểm tra kết nối PostgreSQL & MinIO"
+  local ports=(5433 5434 5435 5436 5437 5438 9000)
   for port in "${ports[@]}"; do
     for i in {1..20}; do
       if nc -z localhost "$port" 2>/dev/null; then
@@ -94,6 +95,8 @@ start_databases() {
   echo -e "  • organization_db: ${GREEN}localhost:5435${NC}"
   echo -e "  • auth_db:         ${GREEN}localhost:5436${NC}"
   echo -e "  • account_db:      ${GREEN}localhost:5437${NC}"
+  echo -e "  • document_db:     ${GREEN}localhost:5438${NC}"
+  echo -e "  • minio:           ${GREEN}localhost:9000${NC} (console :9001)"
 }
 
 # ------------------------------------------------------------------------------
@@ -128,7 +131,7 @@ run_java_service() {
 }
 
 # ------------------------------------------------------------------------------
-# 5. Khởi động 6 dịch vụ Backend Java (chạy trực tiếp trong docs/)
+# 5. Khởi động 7 dịch vụ Backend Java (chạy trực tiếp trong docs/)
 # ------------------------------------------------------------------------------
 start_backend() {
   echo -e "\n${BOLD}${CYAN}=== [2/3] KHỞI ĐỘNG CÁC SERVICE BACKEND (JAVA) ===${NC}"
@@ -188,6 +191,20 @@ start_backend() {
     "APP_SECURITY_MOCK_ENABLED=false" \
     "APP_SECURITY_GATEWAY_SECRET=$gw_secret"
 
+  echo -e "  • Đang chạy ${BOLD}document-service${NC} (Port 8085)..."
+  run_java_service "document" "$DOCS_DIR/document-service" \
+    "SERVER_PORT=8085" \
+    "SPRING_DATASOURCE_URL=jdbc:postgresql://localhost:5438/document_db" \
+    "SPRING_DATASOURCE_USERNAME=postgres" \
+    "SPRING_DATASOURCE_PASSWORD=postgres" \
+    "CATEGORY_SERVICE_URL=http://localhost:8080" \
+    "APP_SECURITY_GATEWAY_SECRET=$gw_secret" \
+    "MINIO_ENDPOINT=${MINIO_ENDPOINT:-http://localhost:9000}" \
+    "MINIO_PUBLIC_ENDPOINT=${MINIO_PUBLIC_ENDPOINT:-http://localhost:9000}" \
+    "MINIO_ACCESS_KEY=${MINIO_ROOT_USER:-minioadmin}" \
+    "MINIO_SECRET_KEY=${MINIO_ROOT_PASSWORD:-minioadmin}" \
+    "MINIO_BUCKET=${MINIO_BUCKET:-attachments}"
+
   echo -e "  • Đang chạy ${BOLD}api-gateway${NC} (Port 9090)..."
   run_java_service "gateway" "$DOCS_DIR/api-gateway" \
     "SERVER_PORT=9090" \
@@ -196,12 +213,13 @@ start_backend() {
     "CATEGORY_SERVICE_URL=http://localhost:8080" \
     "DEPARTMENT_SERVICE_URL=http://localhost:8082" \
     "ORGANIZATION_SERVICE_URL=http://localhost:8083" \
+    "DOCUMENT_SERVICE_URL=http://localhost:8085" \
     "AUTH_GRPC_HOST=localhost" \
     "AUTH_GRPC_PORT=9091" \
     "GATEWAY_SHARED_SECRET=$gw_secret"
 
   echo -n "Đang đợi các service backend lắng nghe cổng"
-  local sv_ports=(8080 8081 8082 8083 8084 9090)
+  local sv_ports=(8080 8081 8082 8083 8084 8085 9090)
   for port in "${sv_ports[@]}"; do
     for i in {1..35}; do
       if nc -z localhost "$port" 2>/dev/null; then
@@ -229,7 +247,7 @@ cleanup() {
   fi
 
   # Dọn dẹp triệt để các process con trên cổng dev
-  for port in 8080 8081 8082 8083 8084 9090 5173; do
+  for port in 8080 8081 8082 8083 8084 8085 9090 5173; do
     local p
     p="$(lsof -t -i :"$port" 2>/dev/null || true)"
     if [ -n "$p" ]; then
@@ -259,6 +277,7 @@ start_frontend() {
   echo -e "${GREEN}│${NC} • Category Service:  ${CYAN}http://localhost:8080${NC}                    ${GREEN}│${NC}"
   echo -e "${GREEN}│${NC} • Department Service:${CYAN}http://localhost:8082${NC}                    ${GREEN}│${NC}"
   echo -e "${GREEN}│${NC} • Org Service:       ${CYAN}http://localhost:8083${NC}                    ${GREEN}│${NC}"
+  echo -e "${GREEN}│${NC} • Document Service:  ${CYAN}http://localhost:8085${NC}                    ${GREEN}│${NC}"
   echo -e "${GREEN}│${NC}                                                              ${GREEN}│${NC}"
   echo -e "${GREEN}│${NC} ${YELLOW}Tài khoản test (seed sẵn):${NC}                                   ${GREEN}│${NC}"
   echo -e "${GREEN}│${NC}   - Admin:    ${BOLD}admin${NC}     / ${BOLD}Admin@123${NC}                         ${GREEN}│${NC}"
@@ -279,8 +298,10 @@ cmd_stop() {
   echo -e "${YELLOW}→ Đang dừng toàn bộ service và database...${NC}"
   cleanup
   if docker info >/dev/null 2>&1; then
+    docker compose -f "$DOCS_DIR/docker-compose.yml" stop minio minio-init >/dev/null 2>&1 || true
+    docker compose -f "$DOCS_DIR/docker-compose.yml" rm -f minio minio-init >/dev/null 2>&1 || true
     docker compose -f "$COMPOSE_FILE" down
-    echo -e "${GREEN}✓ Đã tắt các container Database trong Docker.${NC}"
+    echo -e "${GREEN}✓ Đã tắt các container Database & MinIO trong Docker.${NC}"
   fi
 }
 
@@ -307,11 +328,14 @@ cmd_status() {
     "8080:Category Service"
     "8082:Department Service"
     "8083:Organization Service"
+    "8085:Document Service"
     "5433:Category DB"
     "5434:Department DB"
     "5435:Organization DB"
     "5436:Auth DB"
     "5437:Account DB"
+    "5438:Document DB"
+    "9000:MinIO Object Storage"
   )
   for item in "${ports[@]}"; do
     local p="${item%%:*}"
@@ -339,6 +363,7 @@ cmd_build() {
     "$DOCS_DIR/category-service"
     "$DOCS_DIR/department-service"
     "$DOCS_DIR/organization-service"
+    "$DOCS_DIR/document-service"
     "$DOCS_DIR/api-gateway"
   )
 

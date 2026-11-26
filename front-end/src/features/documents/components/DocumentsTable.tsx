@@ -23,12 +23,12 @@ export default function DocumentsTable({
   const navigate = useNavigate()
   return (
     <div
-      className="overflow-x-auto rounded-xl border border-[#292929]/80 bg-[#121212]/30"
+      className="overflow-x-auto rounded-xl border border-stroke/80 bg-[#121212]/30"
       role="region"
       aria-label="Documents table"
       tabIndex={0}
     >
-      <table className="data-table min-w-[900px]" aria-label="Documents">
+      <table className="data-table min-w-225" aria-label="Documents">
         <thead>
           <tr>
             {[

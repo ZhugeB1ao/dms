@@ -1,4 +1,5 @@
 import type {
+  DocumentAttachment,
   DocumentDetail,
   StatusHistoryEntry,
 } from '@/features/documents/types.ts'
@@ -14,15 +15,17 @@ function seed(): DocumentDetail[] {
       departmentId === 1
         ? 'Board of Directors'
         : 'General Administration Office'
+    const id = i + 1
     return {
-      id: i + 1,
+      id,
       direction,
-      summary: `${direction[0] + direction.slice(1).toLowerCase()} document ${i + 1}`,
+      summary: `${direction[0] + direction.slice(1).toLowerCase()} document ${id}`,
       documentTypeId: 1,
       urgencyId: 4,
       confidentialityId: 7,
       issuingOrganizationId: 1,
       departmentId,
+      dossierId: id === 7 ? 1 : id === 9 ? 2 : null,
       createdBy: i % 2 ? 1 : 3,
       assigneeIds: i % 4 === 0 ? [3] : [],
       status: ['DRAFT', 'READY_TO_PUBLISH', 'PUBLISHED'][i % 3],
@@ -45,13 +48,39 @@ function seed(): DocumentDetail[] {
 export const documentStore = {
   documents: seed(),
   histories: new Map<number, StatusHistoryEntry[]>(),
+  attachments: new Map<number, DocumentAttachment[]>(),
+  attachmentDataUrls: new Map<number, string>(),
   nextId: 91,
   nextDocumentNumber: 1,
+  nextAttachmentId: 91,
 }
 export function resetDocuments() {
   documentStore.documents = seed()
   documentStore.nextId = 91
   documentStore.nextDocumentNumber = 1
+  documentStore.nextAttachmentId = 91
+  documentStore.attachmentDataUrls = new Map()
+  documentStore.attachments = new Map(
+    documentStore.documents
+      .filter((d) => d.id <= 90)
+      .map((d) => [
+        d.id,
+        [
+          {
+            id: d.id,
+            documentId: d.id,
+            fileGroupId: 'seed-group-1',
+            fileName: 'Sample document.pdf',
+            mimeType: 'application/pdf',
+            fileSize: 2048,
+            versionNo: 1,
+            isCurrent: true,
+            uploadedBy: 1,
+            uploadedAt: d.createdAt,
+          },
+        ],
+      ]),
+  )
   documentStore.histories = new Map(
     documentStore.documents.map((d) => [
       d.id,

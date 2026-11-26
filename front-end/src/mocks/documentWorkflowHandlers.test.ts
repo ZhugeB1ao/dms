@@ -118,24 +118,6 @@ it('enforces reviewer assignment and requires a rejection reason', async () => {
   expect((await documentsApi.history(31)).at(-1)?.note).toBe('Wrong recipient')
 })
 
-it('serves mock attachment content within document read scope', async () => {
-  await login('employee')
-  await api.post(transition, { action: 'submit', reviewerId: 2, version: 1 })
-  await login('manager')
-  expect(
-    (await documentsApi.attachments(31)).find((item) => item.canDownload)?.id,
-  ).toBe(2)
-  expect((await api.get('/documents/31/attachments/2/content')).data).toContain(
-    'Sample attachment',
-  )
-  await login('other')
-  await expect(
-    api.get('/documents/31/attachments/2/content'),
-  ).rejects.toMatchObject({
-    response: { status: 403 },
-  })
-})
-
 it('lets another manager in the department read but keeps decisions and inbox private to the reviewer', async () => {
   await login('employee')
   await api.post(transition, { action: 'submit', reviewerId: 2, version: 1 })

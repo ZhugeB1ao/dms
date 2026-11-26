@@ -4,6 +4,10 @@ spring:
   threads:
     virtual:
       enabled: true
+  servlet:
+    multipart:
+      max-file-size: 25MB
+      max-request-size: 25MB
   cloud:
     gateway:
       server:
@@ -49,11 +53,11 @@ spring:
             filters:
               - RemoveRequestHeader=Origin
 
-          # ── File Service: quản lý tài liệu & OCR (:8085) ────────────────
+          # ── Document Service: quản lý văn bản, hồ sơ & tệp đính kèm (:8085) ────
           - id: file-service
-            uri: ${FILE_SERVICE_URL:http://localhost:8085}
+            uri: ${DOCUMENT_SERVICE_URL:${FILE_SERVICE_URL:http://localhost:8085}}
             predicates:
-              - Path=/api/documents, /api/documents/**
+              - Path=/api/documents, /api/documents/**, /api/dossiers, /api/dossiers/**
             filters:
               - RemoveRequestHeader=Origin
 
@@ -77,6 +81,8 @@ spring:
               - RemoveRequestHeader=Origin
 server:
   port: ${SERVER_PORT:9090}
+  tomcat:
+    max-swallow-size: -1
 
 management:
   endpoints:

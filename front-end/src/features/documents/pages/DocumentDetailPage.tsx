@@ -1,8 +1,9 @@
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useRef, useState, type ReactNode } from 'react'
 import { Link, useLocation, useNavigate, useParams } from 'react-router'
 import { useAuth } from '@/features/auth/context/useAuth.ts'
 import Button from '@/shared/components/Button.tsx'
 import { useFetch } from '@/shared/hooks/useFetch.ts'
+import { dossiersApi } from '@/features/dossiers/api/dossiersApi.ts'
 import { documentsApi } from '@/features/documents/api/documentsApi.ts'
 import { documentError } from '@/features/documents/api/documentErrors.ts'
 import {
@@ -33,8 +34,28 @@ export default function DocumentDetailPage() {
     />
   )
 }
+function FetchedRecordLink({ dossierId }: { dossierId: number }) {
+  const { data } = useFetch(
+    useCallback(
+      (signal: AbortSignal) =>
+        dossiersApi.get(dossierId, signal).catch(() => null),
+      [dossierId],
+    ),
+  )
+  return (
+    <Link className="text-link" to={`/records/${dossierId}`}>
+      {data
+        ? `${data.code} — ${data.name}${data.closed ? ' (closed)' : ''}`
+        : `Record #${dossierId}`}
+    </Link>
+  )
+}
+
 function DocumentDetailView({ id }: { id: number }) {
   const { user } = useAuth()
+  const isStaff = Boolean(
+    user && (user.roles.includes('MANAGER') || user.roles.includes('EMPLOYEE')),
+  )
   const navigate = useNavigate()
   const location = useLocation()
   const {
@@ -193,21 +214,65 @@ function DocumentDetailView({ id }: { id: number }) {
             >
               {tab === 0 && (
                 <dl className="grid sm:grid-cols-2 gap-6 rounded-xl border border-neutral-800 p-6">
-                  {Object.entries({
-                    'Document type': doc.lookups.documentType.name,
-                    Urgency: doc.lookups.urgency.name,
-                    Confidentiality: doc.lookups.confidentiality.name,
-                    'Issuing organization':
-                      doc.lookups.issuingOrganization.name,
-                    'Responsible department': doc.lookups.department.name,
-                    ...(doc.documentNumber
-                      ? { 'Document number': doc.documentNumber }
-                      : {}),
-                    ...(doc.reviewerName ? { Reviewer: doc.reviewerName } : {}),
-                    'Created by': `User ${doc.createdBy}`,
-                    Created: new Date(doc.createdAt).toLocaleString('en-GB'),
-                    Updated: new Date(doc.updatedAt).toLocaleString('en-GB'),
-                  }).map(([label, value]) => (
+                  {(
+                    [
+                      ['Document type', doc.lookups.documentType.name],
+                      ['Urgency', doc.lookups.urgency.name],
+                      ['Confidentiality', doc.lookups.confidentiality.name],
+                      [
+                        'Issuing organization',
+                        doc.lookups.issuingOrganization.name,
+                      ],
+                      ['Responsible department', doc.lookups.department.name],
+                      ...(doc.documentNumber
+                        ? [
+                            ['Document number', doc.documentNumber] satisfies [
+                              string,
+                              ReactNode,
+                            ],
+                          ]
+                        : []),
+                      ...(doc.reviewerName
+                        ? [
+                            ['Reviewer', doc.reviewerName] satisfies [
+                              string,
+                              ReactNode,
+                            ],
+                          ]
+                        : []),
+                      [
+                        'Record',
+                        !doc.dossierId ? (
+                          'None'
+                        ) : doc.dossier ? (
+                          isStaff ? (
+                            <Link
+                              className="text-link"
+                              to={`/records/${doc.dossierId}`}
+                            >
+                              {doc.dossier.code} — {doc.dossier.name}
+                              {doc.dossier.closed ? ' (closed)' : ''}
+                            </Link>
+                          ) : (
+                            `${doc.dossier.code} — ${doc.dossier.name}${doc.dossier.closed ? ' (closed)' : ''}`
+                          )
+                        ) : isStaff ? (
+                          <FetchedRecordLink dossierId={doc.dossierId} />
+                        ) : (
+                          `Record #${doc.dossierId}`
+                        ),
+                      ],
+                      ['Created by', `User ${doc.createdBy}`],
+                      [
+                        'Created',
+                        new Date(doc.createdAt).toLocaleString('en-GB'),
+                      ],
+                      [
+                        'Updated',
+                        new Date(doc.updatedAt).toLocaleString('en-GB'),
+                      ],
+                    ] satisfies [string, ReactNode][]
+                  ).map(([label, value]) => (
                     <div key={label}>
                       <dt className="text-sm text-neutral-400 mb-1">{label}</dt>
                       <dd className="break-words">{value}</dd>

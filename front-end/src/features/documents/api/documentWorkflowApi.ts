@@ -31,11 +31,4 @@ export const documentWorkflowApi = {
       .then((response): DocumentDetail | null =>
         response.status === 204 ? null : response.data,
       ),
-  attachmentContent: (id: number, fileId: number, signal: AbortSignal) =>
-    api
-      .get<Blob>(`/documents/${id}/attachments/${fileId}/content`, {
-        responseType: 'blob',
-        signal,
-      })
-      .then(({ data }) => data),
 }
