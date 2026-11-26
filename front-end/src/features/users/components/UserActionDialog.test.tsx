@@ -25,10 +25,15 @@ it('cancels without disabling and confirms the real lifecycle operation', async 
     }),
   )
   await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
-  const updated = await screen.findByRole('row', { name: /employee@demo.test/ })
-  expect(
-    within(updated).getByRole('button', { name: /^Reactivate / }),
-  ).toBeVisible()
+  // Re-query the row each attempt: the old row stays until the list reloads.
+  await waitFor(() =>
+    expect(
+      within(screen.getByRole('row', { name: /employee@demo.test/ })).getByRole(
+        'button',
+        { name: /^Reactivate / },
+      ),
+    ).toBeVisible(),
+  )
   await expect(
     authHttp.post('/auth/login', {
       username: 'employee',
