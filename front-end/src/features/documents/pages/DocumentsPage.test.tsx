@@ -72,3 +72,14 @@ it('removes document data after logout', async () => {
     expect(screen.queryByRole('table')).not.toBeInTheDocument(),
   )
 })
+
+it('opens the detail page when a row is clicked outside the link', async () => {
+  const user = userEvent.setup()
+  await renderDocumentRoute()
+  const table = await screen.findByRole('table', { name: 'Documents' })
+  const row = within(table).getAllByRole('row')[1]
+  await user.click(within(row).getAllByRole('cell')[1])
+  await waitFor(() =>
+    expect(screen.queryByRole('table', { name: 'Documents' })).toBeNull(),
+  )
+})

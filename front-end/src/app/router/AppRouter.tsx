@@ -9,6 +9,7 @@ import OrganizationsPage from '@/features/organizations/pages/OrganizationsPage.
 import OcrPage from '@/features/ocr/pages/OcrPage.tsx'
 import ChatPage from '@/features/chat/pages/ChatPage.tsx'
 import DocumentsPage from '@/features/documents/pages/DocumentsPage.tsx'
+import PendingApprovalsPage from '@/features/documents/pages/PendingApprovalsPage.tsx'
 import DocumentDetailPage from '@/features/documents/pages/DocumentDetailPage.tsx'
 import DossiersPage from '@/features/dossiers/pages/DossiersPage.tsx'
 import DossierDetailPage from '@/features/dossiers/pages/DossierDetailPage.tsx'
@@ -81,6 +82,16 @@ export default function AppRouter() {
                       hash: location.hash,
                     }}
                   />
+                ) : route.path === '/approvals' ? (
+                  <Navigate
+                    replace
+                    to={{
+                      pathname: '/documents/pending-approvals',
+                      search: location.search,
+                    }}
+                  />
+                ) : route.path === '/documents/pending-approvals' ? (
+                  <PendingApprovalsPage />
                 ) : route.path.startsWith('/documents/') ? (
                   <DocumentsPage
                     direction={

@@ -1,5 +1,9 @@
 import type { User } from '@/shared/types/domain.ts'
-import type { DocumentSummary } from '@/features/documents/types.ts'
+import type {
+  DocumentDetail,
+  DocumentSummary,
+  WorkflowCommand,
+} from '@/features/documents/types.ts'
 
 type DocumentScope = Pick<
   DocumentSummary,
@@ -32,3 +36,42 @@ export function canEditDraft(user: User | null, doc: DocumentScope): boolean {
   )
 }
 export const canDeleteDraft = canEditDraft
+
+export function canUseApprovalInbox(user: User | null): boolean {
+  return user?.roles.includes('MANAGER') ?? false
+}
+
+export const workflowSourceStatus: Record<WorkflowCommand['action'], string> = {
+  submit: 'DRAFT',
+  approve: 'PENDING_APPROVAL',
+  reject: 'PENDING_APPROVAL',
+  publish: 'READY_TO_PUBLISH',
+  recall: 'PUBLISHED',
+}
+
+export function hasWorkflowAuthority(
+  user: User | null,
+  doc: DocumentDetail,
+  action: WorkflowCommand['action'],
+): boolean {
+  if (!user || !canViewDocument(user, doc)) return false
+  if (action === 'submit') return String(doc.createdBy) === user.id
+  if (action === 'publish') return doc.canPublish === true
+  if (
+    !canUseApprovalInbox(user) ||
+    String(doc.departmentId) !== user.departmentId
+  )
+    return false
+  return action === 'recall' || String(doc.reviewerId) === user.id
+}
+
+export function canRunWorkflowAction(
+  user: User | null,
+  doc: DocumentDetail,
+  action: WorkflowCommand['action'],
+): boolean {
+  return (
+    doc.status === workflowSourceStatus[action] &&
+    hasWorkflowAuthority(user, doc, action)
+  )
+}

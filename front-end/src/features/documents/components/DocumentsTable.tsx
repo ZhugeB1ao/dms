@@ -1,4 +1,4 @@
-import { Link } from 'react-router'
+import { Link, useNavigate } from 'react-router'
 import Button from '@/shared/components/Button.tsx'
 import { DeleteIcon, EditIcon } from '@/shared/components/Icons.tsx'
 import { crudRowIconClassName } from '@/shared/components/crudStyles.ts'
@@ -20,14 +20,15 @@ export default function DocumentsTable({
   onEdit: (id: number) => void
   onDelete: (id: number) => void
 }) {
+  const navigate = useNavigate()
   return (
     <div
-      className="overflow-x-auto rounded-xl border border-[#292929]/80 bg-[#121212]/30"
+      className="overflow-x-auto rounded-xl border border-stroke/80 bg-[#121212]/30"
       role="region"
       aria-label="Documents table"
       tabIndex={0}
     >
-      <table className="data-table min-w-[900px]" aria-label="Documents">
+      <table className="data-table min-w-225" aria-label="Documents">
         <thead>
           <tr>
             {[
@@ -48,7 +49,14 @@ export default function DocumentsTable({
         </thead>
         <tbody>
           {rows.map((doc) => (
-            <tr key={doc.id}>
+            <tr
+              key={doc.id}
+              className="cursor-pointer transition-colors hover:bg-[#1e1e1e]/40"
+              onClick={(e) => {
+                if (!(e.target as HTMLElement).closest('a, button'))
+                  void navigate(`/documents/${doc.id}`)
+              }}
+            >
               <td>
                 <Link
                   className="text-link inline-block min-w-40 max-w-sm break-words"

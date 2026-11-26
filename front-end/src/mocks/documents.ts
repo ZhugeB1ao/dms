@@ -51,11 +51,13 @@ export const documentStore = {
   attachments: new Map<number, DocumentAttachment[]>(),
   attachmentDataUrls: new Map<number, string>(),
   nextId: 91,
+  nextDocumentNumber: 1,
   nextAttachmentId: 91,
 }
 export function resetDocuments() {
   documentStore.documents = seed()
   documentStore.nextId = 91
+  documentStore.nextDocumentNumber = 1
   documentStore.nextAttachmentId = 91
   documentStore.attachmentDataUrls = new Map()
   documentStore.attachments = new Map(

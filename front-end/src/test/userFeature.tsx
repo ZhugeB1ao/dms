@@ -1,5 +1,5 @@
-import { beforeAll, afterAll, afterEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { beforeAll, afterAll, afterEach, expect } from 'vitest'
+import { render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
 import { setupServer } from 'msw/node'
 import { handlers, resetMock } from '@/mocks/handlers.ts'
@@ -31,6 +31,11 @@ export async function renderAccountRoute(
       </AuthProvider>
     </MemoryRouter>,
   )
-  if (path === '/admin/users' && username === 'admin')
+  if (path === '/admin/users' && username === 'admin') {
     await screen.findByRole('heading', { name: 'Account management' })
+    // Wait for the first GET /accounts, so tests never act on a loading page.
+    await waitFor(() =>
+      expect(screen.queryByText('Loading accounts…')).toBeNull(),
+    )
+  }
 }

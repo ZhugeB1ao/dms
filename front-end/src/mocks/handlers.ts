@@ -1,5 +1,6 @@
 import { http, HttpResponse, delay } from 'msw'
 import { createDocumentHandlers } from '@/mocks/documentHandlers.ts'
+import { createDocumentWorkflowHandlers } from '@/mocks/documentWorkflowHandlers.ts'
 import { resetDocuments } from '@/mocks/documents.ts'
 import {
   createDossierHandlers,
@@ -935,6 +936,7 @@ export const coreHandlers = [
 export const handlers = [
   ...coreHandlers,
   ...createMasterDataHandlers(base),
+  ...createDocumentWorkflowHandlers(base, userFor, () => accounts),
   ...createDocumentHandlers(base, userFor, () => ({
     categories,
     departments,

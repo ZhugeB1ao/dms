@@ -12,6 +12,7 @@ import {
   resolveAttachmentMime,
 } from '@/features/documents/api/attachmentsApi.ts'
 import { documentStore } from '@/mocks/documents.ts'
+import { withMockPublicationPermission } from '@/mocks/documentWorkflowHandlers.ts'
 import { dossierStore } from '@/mocks/dossierHandlers.ts'
 
 const SAMPLE_PDF_DATA_URL =
@@ -271,7 +272,12 @@ export function createDocumentHandlers(
           ? { id: current.id, name: current.name, isActive: current.isActive }
           : { ...lookups[key], isActive: false }
       }
-      return HttpResponse.json(withDossier({ ...checked.doc, lookups }))
+      return HttpResponse.json(
+        withMockPublicationPermission(
+          withDossier({ ...checked.doc, lookups }),
+          checked.user,
+        ),
+      )
     }),
     http.post(`${base}/documents`, async ({ request }) => {
       const user = getUser(request)
